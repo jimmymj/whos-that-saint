@@ -789,7 +789,8 @@
      **************************************************************/
     const STORAGE_KEYS = {
       SETTINGS: 'whos_that_saint_settings_v3',
-      ROSTER: 'whos_that_saint_roster_v4'
+      ROSTER: 'whos_that_saint_roster_v4',
+      SUBMISSIONS: 'whos_that_saint_submissions_v4'
     };
 
     // Official 47 Parish Kids & Saints (Loaded instantly from Documents/SaintList.csv)
@@ -1445,7 +1446,16 @@
           appState.roster = JSON.parse(JSON.stringify(DEFAULT_ROSTER));
         }
 
-        appState.submissions = [];
+        // Load persisted submissions (local cache & pending sync rows)
+        const savedSubs = localStorage.getItem(STORAGE_KEYS.SUBMISSIONS);
+        if (savedSubs) {
+          try {
+            const parsedSubs = JSON.parse(savedSubs);
+            if (Array.isArray(parsedSubs)) {
+              appState.submissions = parsedSubs;
+            }
+          } catch (e) {}
+        }
       } catch (err) {
         console.error('Error loading state:', err);
         appState.roster = JSON.parse(JSON.stringify(DEFAULT_ROSTER));
@@ -1463,7 +1473,9 @@
     }
 
     function saveSubmissionsToStorage() {
-      // Submissions are stored and loaded exclusively from Google Sheet
+      try {
+        localStorage.setItem(STORAGE_KEYS.SUBMISSIONS, JSON.stringify(appState.submissions));
+      } catch (e) {}
     }
 
     function toggleCloudKeyEditor() {
@@ -2298,6 +2310,9 @@
         } else if (result.code === 'DUPLICATE_NAME') {
           updatePersonalSyncBadge('⚠ Duplicate Name Rejected by Cloud', false);
           showToast("Cloud Sheet rejected duplicate participant name!", "error");
+        } else if (result.code === 'NEEDS_REDEPLOY') {
+          updatePersonalSyncBadge('Saved Locally (Cloud Deploy Needed)', false);
+          showToast("Apps Script Web App requires New Version deployment!", "error");
         } else {
           updatePersonalSyncBadge('Saved Locally - Pending Sync', false);
         }
@@ -2314,18 +2329,55 @@
     }
 
     /**
-     * Resilient 3-Tier Cloud Write Helper:
-     *   Tier 1: Standard CORS POST (reads JSON response directly)
-     *   Tier 2: GET query-param fallback for single-row actions
-     *   Tier 3: no-cors POST delivery
+     * Highly Optimized Resilient 3-Tier Cloud Write Helper:
+     *   Tier 1: Fast GET query-param submission (no CORS preflight delay, instant mobile delivery)
+     *   Tier 2: Standard CORS POST with text/plain (direct JSON reading)
+     *   Tier 3: Guaranteed no-cors POST / sendBeacon fallback
      */
     async function sendCloudWriteRequest(action, payloadObj) {
       const url = getActiveCloudUrl();
       if (!url) return { ok: false, message: 'No Cloud Sync Key configured' };
 
-      const bodyStr = JSON.stringify({ action, payload: payloadObj });
+      const sep = url.includes('?') ? '&' : '?';
 
-      // Tier 1: Standard CORS POST
+      // Tier 1: Try fast GET for compact score submissions
+      if (action === 'submitScore' && payloadObj) {
+        const qParams = new URLSearchParams({
+          action: 'submitScore',
+          Submission_ID: payloadObj.Submission_ID || '',
+          Participant_Name: payloadObj.Participant_Name || '',
+          Family_or_Phone: payloadObj.Family_or_Phone || '',
+          Game_Mode: payloadObj.Game_Mode || '',
+          Correct_Score: String(payloadObj.Correct_Score || 0),
+          Total_Attempted: String(payloadObj.Total_Attempted || 0),
+          Accuracy_Percent: String(payloadObj.Accuracy_Percent || 0),
+          Time_Taken_Sec: String(payloadObj.Time_Taken_Sec || 0),
+          Matched_Bib_IDs: payloadObj.Matched_Bib_IDs || '',
+          Timestamp: payloadObj.Timestamp || '',
+          _t: String(Date.now())
+        });
+
+        try {
+          const getRes = await fetch(`${url}${sep}${qParams.toString()}`, { redirect: 'follow' });
+          const rawGetText = await getRes.text();
+          if (rawGetText && !rawGetText.includes('Script function not found')) {
+            try {
+              const getData = JSON.parse(rawGetText);
+              if (getData && getData.status === 'success') {
+                return { ok: true, data: getData };
+              }
+              if (getData && getData.code === 'DUPLICATE_NAME') {
+                return { ok: false, code: 'DUPLICATE_NAME', message: getData.message };
+              }
+            } catch (je) {}
+          }
+        } catch (getErr) {
+          console.warn('GET submission attempt failed, continuing to POST:', getErr);
+        }
+      }
+
+      // Tier 2: Standard CORS POST
+      const bodyStr = JSON.stringify({ action, payload: payloadObj });
       try {
         const res = await fetch(url, {
           method: 'POST',
@@ -2335,7 +2387,22 @@
         });
         const rawText = await res.text();
         if (rawText.includes('Script function not found')) {
-          return { ok: false, code: 'NEEDS_REDEPLOY', message: 'Cloud endpoint version update required.' };
+          // If POST says function not found, try GET with JSON payload as fallback before giving up
+          const encodedPayload = encodeURIComponent(JSON.stringify(payloadObj));
+          if (encodedPayload.length < 1800) {
+            try {
+              const fallbackUrl = `${url}${sep}action=${encodeURIComponent(action)}&payload=${encodedPayload}&_t=${Date.now()}`;
+              const fbRes = await fetch(fallbackUrl, { redirect: 'follow' });
+              const fbText = await fbRes.text();
+              if (fbText && !fbText.includes('Script function not found')) {
+                const fbData = JSON.parse(fbText);
+                if (fbData && fbData.status === 'success') {
+                  return { ok: true, data: fbData };
+                }
+              }
+            } catch (fbErr) {}
+          }
+          return { ok: false, code: 'NEEDS_REDEPLOY', message: 'Apps Script New Version deployment required.' };
         }
         const data = JSON.parse(rawText);
         if (data && data.status === 'success') {
@@ -2343,26 +2410,6 @@
         }
         return { ok: false, code: data?.code, message: data?.message || 'Cloud error' };
       } catch (corsErr) {
-        // Tier 2: Try GET query-param fallback if payload is compact (< 1600 chars)
-        const encodedPayload = encodeURIComponent(JSON.stringify(payloadObj));
-        if (encodedPayload.length < 1600) {
-          try {
-            const sep = url.includes('?') ? '&' : '?';
-            const getUrl = `${url}${sep}action=${encodeURIComponent(action)}&payload=${encodedPayload}&_t=${Date.now()}`;
-            const getRes = await fetch(getUrl, { method: 'GET', redirect: 'follow' });
-            const getRaw = await getRes.text();
-            if (!getRaw.includes('Script function not found')) {
-              const getData = JSON.parse(getRaw);
-              if (getData && getData.status === 'success') {
-                return { ok: true, data: getData };
-              }
-              if (getData && getData.code === 'DUPLICATE_NAME') {
-                return { ok: false, code: 'DUPLICATE_NAME', message: getData.message };
-              }
-            }
-          } catch (getErr) {}
-        }
-
         // Tier 3: Guaranteed no-cors POST delivery
         try {
           await fetch(url, {
@@ -2803,9 +2850,20 @@
         const rawText = await res.text();
         if (rawText.includes('Script function not found')) {
           if (statusEl) {
-            statusEl.innerHTML = `<span class="text-red-700">✗ Cloud Endpoint needs a New Deployment Version published by the administrator.</span>`;
+            statusEl.innerHTML = `
+              <div class="mt-2 p-3 bg-amber-50 border-2 border-amber-400 rounded-xl space-y-2 text-royal-950 text-left">
+                <p class="font-black text-sm text-red-700">⚠ Apps Script Deployment Needs "New Version" Publish</p>
+                <p class="text-xs">Your Google Apps Script Web App was deployed before <code>Code.gs</code> was saved, or needs a New Version. Follow these 4 quick steps:</p>
+                <ol class="text-xs list-decimal pl-4 space-y-1 font-semibold">
+                  <li>Open your Google Sheet and click <strong>Extensions &gt; Apps Script</strong>.</li>
+                  <li>Copy and paste all code from <code>Code.gs</code> into the editor and save (<strong>Ctrl+S</strong>).</li>
+                  <li>Click <strong>Deploy &gt; Manage deployments</strong>.</li>
+                  <li>Click the <strong>Pencil icon (Edit)</strong>, change <strong>Version</strong> to <strong>"New version"</strong>, and click <strong>Deploy</strong>.</li>
+                </ol>
+              </div>
+            `;
           }
-          showToast("Cloud Endpoint requires version update!", "error");
+          showToast("Apps Script Web App requires New Version deployment!", "error");
           return;
         }
         if (res.url.includes('accounts.google.com') || rawText.includes('accounts.google.com') || rawText.trim().startsWith('<!DOCTYPE html>')) {
@@ -2820,7 +2878,7 @@
           const rosterLen = Array.isArray(data.roster) ? data.roster.length : 0;
           const lbLen = Array.isArray(data.leaderboard) ? data.leaderboard.length : 0;
           if (statusEl) {
-            statusEl.textContent = `✓ Encrypted Cloud Sync Active! Verified ${rosterLen} Roster rows & ${lbLen} Participant rows.`;
+            statusEl.innerHTML = `<span class="text-emerald-700">✓ Encrypted Cloud Sync Active! Verified ${rosterLen} Roster rows &amp; ${lbLen} Participant rows in Google Sheet.</span>`;
           }
           showToast("Cloud Sync Verified Successfully!", "success");
         } else {
@@ -2877,12 +2935,19 @@
             saveRosterToStorage();
           }
 
-          // 3. Apply Leaderboard & Participant Scores from Cloud Sheet
+          // 3. Apply Leaderboard & Participant Scores from Cloud Sheet (merging with pending local scores)
           if (Array.isArray(data.leaderboard)) {
-            appState.submissions = data.leaderboard.map(cloudRow => ({
-              ...cloudRow,
-              Sync_Status: 'Synced to Cloud'
-            }));
+            const cloudIds = new Set(data.leaderboard.map(c => c.Submission_ID));
+            const cloudNames = new Set(data.leaderboard.map(c => normalizeName(c.Participant_Name)));
+            const pendingLocal = appState.submissions.filter(s => s.Sync_Status !== 'Synced to Cloud' && !cloudIds.has(s.Submission_ID) && !cloudNames.has(normalizeName(s.Participant_Name)));
+
+            appState.submissions = [
+              ...data.leaderboard.map(cloudRow => ({
+                ...cloudRow,
+                Sync_Status: 'Synced to Cloud'
+              })),
+              ...pendingLocal
+            ];
             saveSubmissionsToStorage();
           }
           renderBibGrid();
@@ -2891,6 +2956,11 @@
           renderAdminScoresTable();
           renderAdminPodiumAndTicker();
           if (notify) showToast("Synced latest Options, Roster & Scores from Cloud Sheet!", "success");
+
+          // Auto-sync any pending local submissions in the background
+          if (appState.submissions.some(s => s.Sync_Status !== 'Synced to Cloud')) {
+            retryUnsyncedSubmissions();
+          }
         }
       } catch (err) {
         if (notify) showToast("Offline or Cloud unreachable — showing cached data.", "error");

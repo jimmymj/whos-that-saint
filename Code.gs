@@ -207,17 +207,29 @@ function setupSheetStructure() {
  */
 function doGet(e) {
   try {
-    if (e && e.parameter && e.parameter.action && e.parameter.payload) {
-      return handleWriteAction(e.parameter.action, JSON.parse(e.parameter.payload));
+    if (e && e.parameter && e.parameter.action) {
+      const action = String(e.parameter.action).trim();
+      let payload = {};
+      if (e.parameter.payload) {
+        try {
+          payload = JSON.parse(e.parameter.payload);
+        } catch (pe) {
+          payload = e.parameter;
+        }
+      } else {
+        payload = e.parameter;
+      }
+      return handleWriteAction(action, payload);
     }
 
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     if (!ss) {
       return createJsonResponse({
         status: 'error',
-        message: 'Database not bound.'
+        message: 'Google Sheet database not bound. Run setupSheetStructure from Apps Script.'
       });
     }
+
     let rosterSheet = ss.getSheetByName(TAB_ROSTER);
     let scoresSheet = ss.getSheetByName(TAB_SCORES);
     if (!rosterSheet || !scoresSheet) {
@@ -256,10 +268,31 @@ function doGet(e) {
  */
 function doPost(e) {
   try {
-    const rawBody = e && e.postData && e.postData.contents ? e.postData.contents : '{}';
-    const body = JSON.parse(rawBody);
-    const action = body.action || 'submitScore';
-    const p = body.payload || body;
+    let action = 'submitScore';
+    let p = {};
+
+    if (e && e.postData && e.postData.contents) {
+      try {
+        const body = JSON.parse(e.postData.contents);
+        action = body.action || (e.parameter ? e.parameter.action : '') || 'submitScore';
+        p = body.payload || body;
+      } catch (parseErr) {
+        action = (e.parameter ? e.parameter.action : '') || 'submitScore';
+        p = e.parameter || {};
+      }
+    } else if (e && e.parameter) {
+      action = e.parameter.action || 'submitScore';
+      if (e.parameter.payload) {
+        try {
+          p = JSON.parse(e.parameter.payload);
+        } catch (pe) {
+          p = e.parameter;
+        }
+      } else {
+        p = e.parameter;
+      }
+    }
+
     return handleWriteAction(action, p);
   } catch (err) {
     return createJsonResponse({
@@ -273,11 +306,26 @@ function doPost(e) {
  * Core Write Handler (used by both doPost and doGet fallback)
  */
 function handleWriteAction(action, p) {
+  if (action === 'ping') {
+    return createJsonResponse({
+      status: 'success',
+      pong: true,
+      timestamp: new Date().toISOString()
+    });
+  }
+
   const lock = LockService.getScriptLock();
   try {
-    lock.waitLock(15000);
+    lock.waitLock(10000);
 
     const ss = SpreadsheetApp.getActiveSpreadsheet();
+    if (!ss) {
+      return createJsonResponse({
+        status: 'error',
+        message: 'Spreadsheet connection not found.'
+      });
+    }
+
     let rosterSheet = ss.getSheetByName(TAB_ROSTER);
     let scoresSheet = ss.getSheetByName(TAB_SCORES);
     if (!rosterSheet || !scoresSheet) {
@@ -397,7 +445,7 @@ function handleWriteAction(action, p) {
       });
     }
 
-    // Default: submitScore
+    // Default: submitScore (Optimized single-pass validation and rank calculation)
     const submissionId = sanitizeCellForSheet(p.Submission_ID || ('SUB-' + new Date().getTime()), 50);
     const cleanName = sanitizeCellForSheet(p.Participant_Name || '', 60);
     const normCandidateName = normalizeParticipantName(cleanName);
@@ -410,13 +458,21 @@ function handleWriteAction(action, p) {
       });
     }
 
+    const totalAttempted = Math.min(100, Math.max(1, Math.floor(Number(p.Total_Attempted || 1))));
+    const maxPossiblePoints = totalAttempted * 10;
+    const pointsScore = Math.min(maxPossiblePoints, Math.max(0, Math.floor(Number(p.Correct_Score || 0))));
+    const accuracyPct = Math.min(100, Math.max(0, Number(Number(p.Accuracy_Percent || 0).toFixed(1))));
+    const timeTakenSec = Math.min(86400, Math.max(1, Math.floor(Number(p.Time_Taken_Sec || 1))));
+
     const existingData = scoresSheet.getDataRange().getValues();
+    let calculatedRank = 1;
+
     for (let i = 1; i < existingData.length; i++) {
       if (String(existingData[i][0]) === submissionId) {
         return createJsonResponse({
           status: 'success',
           duplicate: true,
-          rank: calculateParticipantRank(existingData, Number(p.Correct_Score || 0), Number(p.Time_Taken_Sec || 0))
+          rank: calculateParticipantRank(existingData, pointsScore, timeTakenSec)
         });
       }
       if (normalizeParticipantName(existingData[i][2]) === normCandidateName) {
@@ -426,13 +482,12 @@ function handleWriteAction(action, p) {
           message: 'Participant name is already registered. Duplicate names are not allowed.'
         });
       }
+      const rowScore = Number(existingData[i][5] || 0);
+      const rowTime = Number(existingData[i][8] || 999999);
+      if (rowScore > pointsScore || (rowScore === pointsScore && rowTime < timeTakenSec)) {
+        calculatedRank++;
+      }
     }
-
-    const totalAttempted = Math.min(100, Math.max(1, Math.floor(Number(p.Total_Attempted || 1))));
-    const maxPossiblePoints = totalAttempted * 10;
-    const pointsScore = Math.min(maxPossiblePoints, Math.max(0, Math.floor(Number(p.Correct_Score || 0))));
-    const accuracyPct = Math.min(100, Math.max(0, Number(Number(p.Accuracy_Percent || 0).toFixed(1))));
-    const timeTakenSec = Math.min(86400, Math.max(1, Math.floor(Number(p.Time_Taken_Sec || 1))));
 
     const validBibs = String(p.Matched_Bib_IDs || '')
       .split(',')
@@ -454,9 +509,6 @@ function handleWriteAction(action, p) {
 
     scoresSheet.appendRow(rowToAppend);
     SpreadsheetApp.flush();
-
-    const updatedData = scoresSheet.getDataRange().getValues();
-    const calculatedRank = calculateParticipantRank(updatedData, pointsScore, timeTakenSec);
 
     return createJsonResponse({
       status: 'success',
