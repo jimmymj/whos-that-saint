@@ -41,24 +41,42 @@
       margin: 0;
       padding: 0;
       width: 100%;
+      height: 100%;
+      height: 100dvh;
       max-width: 100vw;
-      min-height: 100dvh;
-      overflow-x: hidden;
-      overscroll-behavior-y: none;
-      background-color: #fdf8f0;
-      background-image: radial-gradient(circle at top right, rgba(217, 119, 6, 0.08), transparent 45%),
-                        radial-gradient(circle at bottom left, rgba(107, 40, 24, 0.06), transparent 45%);
+      overflow: hidden;
+      overscroll-behavior: none;
+      background-color: #3b150c; /* Matches top app bar so status bar / notch area is never blank cream */
       color: #1c1917;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       touch-action: manipulation;
-      padding-top: env(safe-area-inset-top, 0px);
-      padding-bottom: env(safe-area-inset-bottom, 0px);
+      -webkit-font-smoothing: antialiased;
+    }
+    #appShell {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background-color: #fdf8f0;
+      background-image: radial-gradient(circle at top right, rgba(217, 119, 6, 0.08), transparent 45%),
+                        radial-gradient(circle at bottom left, rgba(107, 40, 24, 0.06), transparent 45%);
+    }
+    #appMainScroll {
+      flex: 1 1 0%;
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior-y: contain;
     }
     :fullscreen, ::backdrop {
-      background-color: #fdf8f0;
+      background-color: #3b150c;
     }
     :-webkit-full-screen {
-      background-color: #fdf8f0;
+      background-color: #3b150c;
     }
     @keyframes tickerScroll {
       0% { transform: translateY(0%); }
@@ -72,46 +90,60 @@
     }
   </style>
 </head>
-<body class="min-h-screen flex flex-col bg-liturgical-cream text-slate-900 pb-20">
+<body class="select-none">
+  <div id="appShell" class="max-w-lg mx-auto sm:shadow-2xl sm:border-x sm:border-amber-900/20">
 
-  <!-- STICKY TOP COMPACT BAR (FALL HARVEST MAHOGANY & LITURGICAL GOLD) -->
-  <header class="sticky top-0 z-30 bg-gradient-to-r from-royal-950 via-royal-900 to-royal-800 text-white px-2.5 py-2 shadow-md border-b-2 border-amber-400 w-full max-w-full">
-    <div class="flex items-center justify-between gap-1.5 w-full">
+  <!-- NATIVE MOBILE APP TOP BAR (PINNED AT TOP, ZERO BLANK OFFSET) -->
+  <header class="shrink-0 z-30 bg-gradient-to-b from-royal-950 via-royal-900 to-royal-800 text-white px-3 pt-2 pb-2 shadow-md border-b-2 border-amber-400 w-full" style="padding-top: max(0.5rem, env(safe-area-inset-top));">
+    <!-- Row 1: Brand Title & Quick App Navigation Icons -->
+    <div class="flex items-center justify-between gap-2 w-full">
       <div class="flex items-center gap-2 min-w-0">
         <!-- Holy Saint Halo & Cross Emblem -->
-        <span class="w-7 h-7 rounded-lg bg-amber-400/20 border border-amber-400 flex items-center justify-center shrink-0 shadow-inner" aria-hidden="true">
+        <span class="w-8 h-8 rounded-xl bg-amber-400/20 border border-amber-400 flex items-center justify-center shrink-0 shadow-inner" aria-hidden="true">
           <svg class="w-5 h-5 text-amber-300" viewBox="0 0 24 24" fill="none" stroke="currentColor">
             <ellipse cx="12" cy="5.5" rx="6.5" ry="2.2" stroke-width="2" stroke="#fbbf24" />
             <path d="M12 9v12M8.5 13h7" stroke-width="2.4" stroke-linecap="round" stroke="#fde68a" />
           </svg>
         </span>
-        <div class="truncate">
-          <h1 class="text-sm sm:text-base font-extrabold tracking-tight text-amber-50 truncate leading-tight">Who’s That Saint?</h1>
-          <p id="topPlayerBadge" class="text-[11px] text-amber-300 font-semibold truncate">All Saints' Harvest Activity</p>
+        <div class="min-w-0">
+          <h1 class="text-base sm:text-lg font-black tracking-tight text-amber-50 leading-none truncate">Who’s That Saint?</h1>
+          <p class="text-[11px] text-amber-300/90 font-semibold leading-tight mt-0.5 truncate">All Saints' Day Parish Activity</p>
         </div>
       </div>
 
-      <div class="flex items-center gap-1 shrink-0">
-        <div id="liveScorePill" class="bg-amber-400 text-royal-950 px-2 py-1 rounded-lg font-extrabold text-xs sm:text-sm flex items-center gap-1 shadow-sm">
-          <span>📋</span>
-          <span id="headerScoreText">0 Found</span>
-          <span id="headerTimerText" class="text-[11px] font-bold opacity-80 ml-0.5">0s</span>
-        </div>
-        <button id="btnFullscreenToggle" onclick="toggleFullScreenMode(true)" title="Full Screen Mode (Hide Address Bar)" class="min-h-[38px] px-2 py-1 rounded-lg bg-royal-800 hover:bg-slate-700 text-amber-300 border border-amber-400/40 text-xs font-extrabold active:scale-[0.99]">
-          ⛶ Full
+      <div class="flex items-center gap-1.5 shrink-0">
+        <button id="btnFullscreenToggle" onclick="toggleFullScreenMode(true)" title="Toggle Full Screen"
+          class="min-h-[36px] px-2.5 py-1 rounded-xl bg-royal-950/60 hover:bg-royal-950 text-amber-200 border border-amber-400/40 text-xs font-extrabold flex items-center gap-1 active:scale-[0.98]">
+          <span>⛶</span>
+          <span id="fullscreenBtnLabel">Full</span>
         </button>
-        <button id="btnSwitchView" onclick="handleQuickSwitchButton()" class="min-h-[38px] px-2 py-1 rounded-lg bg-royal-800 hover:bg-slate-700 text-amber-300 border border-amber-400/40 text-xs font-bold active:scale-[0.99]">
+        <button id="btnSwitchView" onclick="handleQuickSwitchButton()"
+          class="min-h-[36px] px-2.5 py-1 rounded-xl bg-royal-950/60 hover:bg-royal-950 text-amber-200 border border-amber-400/40 text-xs font-extrabold active:scale-[0.98]">
           🏆 Ranks
         </button>
-        <button id="btnAdminToggle" onclick="openAdminGate()" class="min-h-[38px] px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-white border border-slate-600 text-xs font-bold active:scale-[0.99]">
+        <button id="btnAdminToggle" onclick="openAdminGate()" aria-label="Admin Settings"
+          class="min-h-[36px] w-9 rounded-xl bg-royal-950/60 hover:bg-royal-950 text-amber-100 border border-amber-400/30 text-sm font-bold flex items-center justify-center active:scale-[0.98]">
           ⚙
         </button>
       </div>
     </div>
+
+    <!-- Row 2: Compact Native Status Strip (Player Name, Mode & Live Progress Pill) -->
+    <div class="mt-2 pt-1.5 border-t border-amber-400/20 flex items-center justify-between gap-2 text-xs">
+      <div class="flex items-center gap-1.5 min-w-0">
+        <span class="w-2 h-2 rounded-full bg-amber-400 shrink-0"></span>
+        <span id="topPlayerBadge" class="font-bold text-amber-100 truncate">Welcome! Enter your name below</span>
+      </div>
+      <div id="liveScorePill" class="bg-amber-400 text-royal-950 px-2.5 py-0.5 rounded-full font-black text-xs flex items-center gap-1.5 shadow-sm shrink-0">
+        <span>📋 <span id="headerScoreText">0 Recorded</span></span>
+        <span class="opacity-40">|</span>
+        <span id="headerTimerText" class="font-extrabold">0s</span>
+      </div>
+    </div>
   </header>
 
-  <!-- MAIN EDGE-TO-EDGE CONTAINER -->
-  <main class="w-full max-w-full px-2 sm:px-3 mx-0 pt-2.5 flex-1 space-y-2.5">
+  <!-- MAIN SCROLLABLE NATIVE APP VIEWPORT -->
+  <main id="appMainScroll" class="w-full px-2.5 py-2.5 space-y-2.5">
 
     <!-- GLOBAL NOTIFICATION BANNER -->
     <div id="globalToast" class="hidden w-full rounded-xl p-2.5 text-sm font-bold text-center shadow-md transition-all"></div>
@@ -216,38 +248,40 @@
          VIEW 2A: 100-KID BIB # & NAME FINDER GRID
          ========================================== -->
     <section id="viewBibExplorer" class="hidden w-full space-y-2.5">
-      <!-- Sticky Search & Quick Filter Bar -->
-      <div class="sticky top-[54px] z-20 bg-liturgical-cream pt-1 pb-1.5 space-y-1.5">
-        <div class="w-full rounded-xl p-2.5 bg-white border-2 border-royal-900 shadow-sm space-y-2">
+      <!-- Sticky Search & Quick Filter Bar inside Scroll Viewport -->
+      <div class="sticky top-0 z-20 bg-liturgical-cream/95 backdrop-blur pb-1.5 space-y-1.5">
+        <div class="w-full rounded-2xl p-2.5 bg-white border-2 border-amber-400/80 shadow-sm space-y-2">
           <div class="flex items-center gap-1.5">
-            <input id="inputBibSearch" type="text" inputmode="search" placeholder="Search Bib # (1-100), Kid Name, or Saint..."
-              oninput="renderBibGrid()"
-              class="w-full min-h-[48px] px-3 py-2 rounded-xl border-2 border-slate-300 focus:border-royal-900 focus:outline-none text-base font-bold text-slate-900 bg-slate-50" />
+            <div class="relative flex-1">
+              <input id="inputBibSearch" type="text" inputmode="search" placeholder="Search Bib # (1-100) or Name..."
+                oninput="renderBibGrid()"
+                class="w-full min-h-[46px] pl-3 pr-3 py-2 rounded-xl border-2 border-slate-300 focus:border-royal-900 focus:outline-none text-base font-bold text-slate-900 bg-slate-50" />
+            </div>
             <button type="button" onclick="clearBibSearch()"
-              class="min-h-[48px] px-3 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-800 font-extrabold text-sm shrink-0 active:scale-[0.99]">
+              class="min-h-[46px] px-3.5 rounded-xl bg-amber-100 hover:bg-amber-200 text-royal-950 border border-amber-300 font-extrabold text-xs shrink-0 active:scale-[0.98]">
               Clear
             </button>
           </div>
 
-          <!-- Instant Range Jump Pills -->
-          <div class="grid grid-cols-5 gap-1">
-            <button type="button" onclick="setBibRangeFilter('ALL')" id="rangeBtnALL" class="min-h-[38px] rounded-lg bg-royal-900 text-amber-300 font-extrabold text-xs active:scale-[0.99]">All 100</button>
-            <button type="button" onclick="setBibRangeFilter('1-25')" id="rangeBtn1-25" class="min-h-[38px] rounded-lg bg-slate-100 text-slate-800 font-bold text-xs border border-slate-300 active:scale-[0.99]">#1–25</button>
-            <button type="button" onclick="setBibRangeFilter('26-50')" id="rangeBtn26-50" class="min-h-[38px] rounded-lg bg-slate-100 text-slate-800 font-bold text-xs border border-slate-300 active:scale-[0.99]">#26–50</button>
-            <button type="button" onclick="setBibRangeFilter('51-75')" id="rangeBtn51-75" class="min-h-[38px] rounded-lg bg-slate-100 text-slate-800 font-bold text-xs border border-slate-300 active:scale-[0.99]">#51–75</button>
-            <button type="button" onclick="setBibRangeFilter('76-100')" id="rangeBtn76-100" class="min-h-[38px] rounded-lg bg-slate-100 text-slate-800 font-bold text-xs border border-slate-300 active:scale-[0.99]">#76–100</button>
+          <!-- Instant Range Jump Segmented Control -->
+          <div class="grid grid-cols-5 gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
+            <button type="button" onclick="setBibRangeFilter('ALL')" id="rangeBtnALL" class="min-h-[36px] rounded-lg bg-royal-900 text-amber-300 font-extrabold text-xs shadow-sm active:scale-[0.98]">All 100</button>
+            <button type="button" onclick="setBibRangeFilter('1-25')" id="rangeBtn1-25" class="min-h-[36px] rounded-lg bg-transparent text-slate-700 font-bold text-xs active:scale-[0.98]">#1–25</button>
+            <button type="button" onclick="setBibRangeFilter('26-50')" id="rangeBtn26-50" class="min-h-[36px] rounded-lg bg-transparent text-slate-700 font-bold text-xs active:scale-[0.98]">#26–50</button>
+            <button type="button" onclick="setBibRangeFilter('51-75')" id="rangeBtn51-75" class="min-h-[36px] rounded-lg bg-transparent text-slate-700 font-bold text-xs active:scale-[0.98]">#51–75</button>
+            <button type="button" onclick="setBibRangeFilter('76-100')" id="rangeBtn76-100" class="min-h-[36px] rounded-lg bg-transparent text-slate-700 font-bold text-xs active:scale-[0.98]">#76–100</button>
           </div>
         </div>
       </div>
 
       <!-- Status Bar -->
       <div class="flex items-center justify-between px-1 text-xs font-bold text-slate-700">
-        <span id="bibExplorerProgressText">Tap any badge # below to record your match!</span>
-        <span class="text-royal-900 font-extrabold" id="bibCompletedCountText">0 / 100 Recorded</span>
+        <span id="bibExplorerProgressText">Tap a badge # below to record your match:</span>
+        <span class="bg-amber-100 text-royal-900 border border-amber-300 px-2 py-0.5 rounded-full font-extrabold text-[11px]" id="bibCompletedCountText">0 / 100 Recorded</span>
       </div>
 
       <!-- 5-Column Compact Bib Grid -->
-      <div id="bibGridContainer" class="grid grid-cols-5 gap-1.5 w-full"></div>
+      <div id="bibGridContainer" class="grid grid-cols-5 gap-1.5 w-full pb-2"></div>
     </section>
 
     <!-- ==========================================
@@ -702,15 +736,16 @@
     </div>
   </div>
 
-  <!-- STICKY BOTTOM PRIMARY ACTION BAR -->
-  <footer id="stickyBottomBar" class="fixed bottom-0 left-0 right-0 z-30 bg-white/95 backdrop-blur border-t-2 border-amber-300 px-2.5 py-2 shadow-lg">
-    <div id="bottomBarContent" class="w-full max-w-full flex items-center gap-2">
+  <!-- NATIVE BOTTOM ACTION BAR (PART OF FLEX APP SHELL, NEVER OVERLAPS OR DRIFTS) -->
+  <footer id="stickyBottomBar" class="shrink-0 z-30 bg-white/95 backdrop-blur border-t-2 border-amber-300 px-2.5 py-2 shadow-[0_-4px_12px_rgba(0,0,0,0.06)] w-full" style="padding-bottom: max(0.5rem, env(safe-area-inset-bottom));">
+    <div id="bottomBarContent" class="w-full flex items-center gap-2">
       <button type="button" onclick="startActivityFromRegistration()"
-        class="w-full min-h-[52px] rounded-xl bg-royal-900 hover:bg-royal-800 text-amber-300 font-black text-base sm:text-lg shadow-md active:scale-[0.99]">
-        Start Saints Find Activity →
+        class="w-full min-h-[50px] rounded-xl bg-gradient-to-r from-royal-950 via-royal-900 to-royal-800 hover:from-royal-900 hover:to-royal-800 text-amber-300 border border-amber-400/50 font-black text-base shadow-md active:scale-[0.99]">
+        ✞ Start Saints Find Activity →
       </button>
     </div>
   </footer>
+  </div><!-- /#appShell -->
 
   <!-- APPLICATION JAVASCRIPT -->
   <script>
@@ -932,9 +967,6 @@
     }
 
     async function requestMobileFullScreen() {
-      // Collapse mobile browser URL bar via scroll trick for iOS Safari fallback
-      setTimeout(() => { window.scrollTo(0, 1); }, 50);
-
       if (isCurrentlyFullScreen()) {
         updateFullscreenButtonUI();
         return true;
@@ -951,7 +983,6 @@
         updateFullscreenButtonUI();
         return true;
       } catch (err) {
-        // Silently ignore if gesture was not eligible yet
         return false;
       }
     }
@@ -969,29 +1000,31 @@
       } else {
         const entered = await requestMobileFullScreen();
         if (!entered && showFeedback) {
-          showToast("Tip on iPhone: Tap Share -> 'Add to Home Screen' for 100% full-screen mode!", "info");
+          showToast("Tip on iPhone: Tap Share -> 'Add to Home Screen' for 100% full-screen app mode!", "info");
         }
       }
     }
 
     function updateFullscreenButtonUI() {
-      const btn = document.getElementById('btnFullscreenToggle');
-      if (!btn) return;
+      const label = document.getElementById('fullscreenBtnLabel');
+      if (!label) return;
       const active = Boolean(document.fullscreenElement || document.webkitFullscreenElement);
-      btn.textContent = active ? '⛶ Exit' : '⛶ Full';
+      label.textContent = active ? 'Exit' : 'Full';
     }
 
     function setupAutoFullscreenListeners() {
-      // Automatically enter Full Screen (hiding address bar & bookmarks) on first user tap/click
-      const triggerOnce = (e) => {
-        // Don't hijack if user explicitly clicked the Exit Fullscreen button
-        if (e.target && e.target.id === 'btnFullscreenToggle') return;
-        if (!isCurrentlyFullScreen()) {
-          requestMobileFullScreen();
+      // Trigger fullscreen ONLY when tapping buttons (NOT text inputs, so mobile keyboard never shifts viewport)
+      const triggerOnButton = (e) => {
+        const tag = (e.target && e.target.tagName) ? e.target.tagName.toUpperCase() : '';
+        if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+        if (e.target && e.target.closest && e.target.closest('#btnFullscreenToggle')) return;
+        if (e.target && e.target.closest && e.target.closest('button')) {
+          if (!isCurrentlyFullScreen()) {
+            requestMobileFullScreen();
+          }
         }
       };
-      document.addEventListener('click', triggerOnce, { passive: true });
-      document.addEventListener('touchend', triggerOnce, { passive: true });
+      document.addEventListener('click', triggerOnButton, { passive: true });
       document.addEventListener('fullscreenchange', updateFullscreenButtonUI);
       document.addEventListener('webkitfullscreenchange', updateFullscreenButtonUI);
     }
@@ -1137,7 +1170,8 @@
       }
 
       renderStickyBottomBar();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      const scrollEl = document.getElementById('appMainScroll');
+      if (scrollEl) scrollEl.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     function handleQuickSwitchButton() {
@@ -1159,49 +1193,49 @@
       if (view === 'registration') {
         container.innerHTML = `
           <button type="button" onclick="startActivityFromRegistration()"
-            class="w-full min-h-[52px] rounded-xl bg-royal-900 hover:bg-royal-800 text-amber-300 font-black text-base sm:text-lg shadow-md active:scale-[0.99]">
-            Start Saints Find Activity →
+            class="w-full min-h-[50px] rounded-xl bg-gradient-to-r from-royal-950 via-royal-900 to-royal-800 text-amber-300 border border-amber-400/50 font-black text-base shadow-md active:scale-[0.99]">
+            ✞ Start Saints Find Activity →
           </button>
         `;
       } else if (view === 'bibExplorer') {
         const count = appState.session.totalAttempted;
         container.innerHTML = `
           <button type="button" onclick="focusBibSearchInput()"
-            class="w-1/3 min-h-[52px] rounded-xl bg-slate-200 text-royal-900 font-extrabold text-sm active:scale-[0.99]">
-            🔍 Find Bib #
+            class="w-1/3 min-h-[50px] rounded-xl bg-amber-100 text-royal-950 border border-amber-300 font-extrabold text-xs sm:text-sm whitespace-nowrap px-2 active:scale-[0.98]">
+            🔍 Search #
           </button>
           <button type="button" onclick="finishAndSubmitScore()"
-            class="w-2/3 min-h-[52px] rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-base shadow-md active:scale-[0.99]">
-            ✓ Submit Final Activity (${count} Recorded)
+            class="w-2/3 min-h-[50px] rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-sm sm:text-base whitespace-nowrap px-3 shadow-md active:scale-[0.98]">
+            ✓ Submit Score (${count} Found)
           </button>
         `;
       } else if (view === 'questionCard') {
         container.innerHTML = `
           <button type="button" onclick="switchView('bibExplorer')"
-            class="w-1/2 min-h-[52px] rounded-xl bg-royal-900 text-amber-300 font-extrabold text-sm sm:text-base active:scale-[0.99]">
-            🔢 Back to Bib # Grid
+            class="w-1/2 min-h-[50px] rounded-xl bg-royal-900 text-amber-300 font-extrabold text-sm whitespace-nowrap active:scale-[0.98]">
+            🔢 Bib # Grid
           </button>
           <button type="button" onclick="openNextUnansweredBib()"
-            class="w-1/2 min-h-[52px] rounded-xl bg-amber-400 text-royal-950 font-black text-sm sm:text-base active:scale-[0.99]">
-            Next Unanswered Bib →
+            class="w-1/2 min-h-[50px] rounded-xl bg-amber-400 text-royal-950 font-black text-sm whitespace-nowrap active:scale-[0.98]">
+            Next Unanswered →
           </button>
         `;
       } else if (view === 'results') {
         container.innerHTML = `
           <button type="button" onclick="switchView('registration')"
-            class="w-1/2 min-h-[52px] rounded-xl bg-royal-900 text-amber-300 font-extrabold text-sm sm:text-base active:scale-[0.99]">
-            ➕ New Participant
+            class="w-1/2 min-h-[50px] rounded-xl bg-royal-900 text-amber-300 font-extrabold text-sm whitespace-nowrap active:scale-[0.98]">
+            ➕ New Player
           </button>
           <button type="button" onclick="resumeCurrentSessionIfAvailable()"
-            class="w-1/2 min-h-[52px] rounded-xl bg-amber-400 text-royal-950 font-extrabold text-sm sm:text-base active:scale-[0.99]">
-            🔢 Return to Active Hunt
+            class="w-1/2 min-h-[50px] rounded-xl bg-amber-400 text-royal-950 font-extrabold text-sm whitespace-nowrap active:scale-[0.98]">
+            🔢 Back to Grid
           </button>
         `;
       } else if (view === 'admin') {
         container.innerHTML = `
           <button type="button" onclick="switchView('registration')"
-            class="w-full min-h-[52px] rounded-xl bg-royal-900 text-amber-300 font-extrabold text-base active:scale-[0.99]">
-            ← Return to Saints Find Screen
+            class="w-full min-h-[50px] rounded-xl bg-royal-900 text-amber-300 font-extrabold text-sm whitespace-nowrap active:scale-[0.98]">
+            ← Return to Activity Screen
           </button>
         `;
       }
@@ -1310,10 +1344,10 @@
       const timerText = document.getElementById('headerTimerText');
 
       if (appState.session.participantName) {
-        const shortMode = appState.session.gameMode === 'Find Saint by Kid Name' ? 'Find Saint' : 'Find Kid';
+        const shortMode = appState.session.gameMode === 'Find Saint by Kid Name' ? 'Find Saint by Kid' : 'Find Kid by Saint';
         playerBadge.textContent = `${appState.session.participantName} • ${shortMode}`;
       } else {
-        playerBadge.textContent = 'Saints Find Activity';
+        playerBadge.textContent = 'Welcome! Enter your name below';
       }
 
       // Do NOT show live points or right/wrong count in header so participants cannot deduce correct answers
@@ -1331,8 +1365,8 @@
         const btn = document.getElementById(`rangeBtn${r}`);
         if (btn) {
           btn.className = (r === range)
-            ? "min-h-[38px] rounded-lg bg-royal-900 text-amber-300 font-extrabold text-xs active:scale-[0.99]"
-            : "min-h-[38px] rounded-lg bg-slate-100 text-slate-800 font-bold text-xs border border-slate-300 active:scale-[0.99]";
+            ? "min-h-[36px] rounded-lg bg-royal-900 text-amber-300 font-extrabold text-xs shadow-sm active:scale-[0.98]"
+            : "min-h-[36px] rounded-lg bg-transparent text-slate-700 font-bold text-xs active:scale-[0.98]";
         }
       });
       renderBibGrid();
@@ -1345,11 +1379,10 @@
     }
 
     function focusBibSearchInput() {
+      const scrollEl = document.getElementById('appMainScroll');
+      if (scrollEl) scrollEl.scrollTo({ top: 0, behavior: 'smooth' });
       const input = document.getElementById('inputBibSearch');
-      if (input) {
-        input.focus();
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      }
+      if (input) input.focus();
     }
 
     function renderBibGrid() {
