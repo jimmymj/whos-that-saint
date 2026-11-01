@@ -167,7 +167,7 @@
             </h2>
           </div>
           <span id="rosterCountBadge" class="bg-amber-400 text-royal-950 text-[11px] font-black px-2.5 py-1 rounded-lg shadow-sm shrink-0">
-            Syncing Sheet...
+            47 Kids Ready
           </span>
         </div>
         <p class="text-xs sm:text-sm text-amber-50 font-semibold leading-relaxed">
@@ -261,7 +261,7 @@
         <div class="w-full rounded-2xl p-2.5 bg-white border-2 border-amber-400/80 shadow-sm space-y-2">
           <div class="flex items-center gap-1.5">
             <div class="relative flex-1">
-              <input id="inputBibSearch" type="text" inputmode="search" placeholder="Search Bib # (1-100) or Name..."
+              <input id="inputBibSearch" type="text" inputmode="search" placeholder="Search Bib # (1-47) or Name..."
                 oninput="renderBibGrid()"
                 class="w-full min-h-[46px] pl-3 pr-3 py-2 rounded-xl border-2 border-slate-300 focus:border-royal-900 focus:outline-none text-base font-bold text-slate-900 bg-slate-50" />
             </div>
@@ -272,12 +272,10 @@
           </div>
 
           <!-- Instant Range Jump Segmented Control -->
-          <div class="grid grid-cols-5 gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
-            <button type="button" onclick="setBibRangeFilter('ALL')" id="rangeBtnALL" class="min-h-[36px] rounded-lg bg-royal-900 text-amber-300 font-extrabold text-xs shadow-sm active:scale-[0.98]">All</button>
+          <div class="grid grid-cols-3 gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
+            <button type="button" onclick="setBibRangeFilter('ALL')" id="rangeBtnALL" class="min-h-[36px] rounded-lg bg-royal-900 text-amber-300 font-extrabold text-xs shadow-sm active:scale-[0.98]">All (47)</button>
             <button type="button" onclick="setBibRangeFilter('1-25')" id="rangeBtn1-25" class="min-h-[36px] rounded-lg bg-transparent text-slate-700 font-bold text-xs active:scale-[0.98]">#1–25</button>
-            <button type="button" onclick="setBibRangeFilter('26-50')" id="rangeBtn26-50" class="min-h-[36px] rounded-lg bg-transparent text-slate-700 font-bold text-xs active:scale-[0.98]">#26–50</button>
-            <button type="button" onclick="setBibRangeFilter('51-75')" id="rangeBtn51-75" class="min-h-[36px] rounded-lg bg-transparent text-slate-700 font-bold text-xs active:scale-[0.98]">#51–75</button>
-            <button type="button" onclick="setBibRangeFilter('76-100')" id="rangeBtn76-100" class="min-h-[36px] rounded-lg bg-transparent text-slate-700 font-bold text-xs active:scale-[0.98]">#76+</button>
+            <button type="button" onclick="setBibRangeFilter('26-50')" id="rangeBtn26-50" class="min-h-[36px] rounded-lg bg-transparent text-slate-700 font-bold text-xs active:scale-[0.98]">#26–47</button>
           </div>
         </div>
       </div>
@@ -790,8 +788,436 @@
      * 1. STORAGE KEYS & APPLICATION STATE (GOOGLE SHEET ONLY — NO SAMPLE DATA)
      **************************************************************/
     const STORAGE_KEYS = {
-      SETTINGS: 'whos_that_saint_settings_v3'
+      SETTINGS: 'whos_that_saint_settings_v3',
+      ROSTER: 'whos_that_saint_roster_v4'
     };
+
+    // Official 47 Parish Kids & Saints (Loaded instantly from Documents/SaintList.csv)
+    const DEFAULT_ROSTER = [
+      {
+        "Bib_Number": 1,
+        "Kid_Name": "John Joseph",
+        "Saint_Name": "St. Isidore the Farmer",
+        "Category_Grade": "PreK-2",
+        "Saint_Clue": "A Spanish farm laborer and patron saint of farmers, known for sharing his meals with the poor while angels plowed the fields beside him.",
+        "Outfit_Clue": "Peasant farmer tunic, straw hat, and carrying a shovel, sickle, or sheaf of wheat.",
+        "Secret_Pin": ""
+      },
+      {
+        "Bib_Number": 2,
+        "Kid_Name": "Aimie George",
+        "Saint_Name": "St. Lucy",
+        "Category_Grade": "PreK-2",
+        "Saint_Clue": "A young virgin martyr of Syracuse whose name means 'Light'; patron saint of the blind and those with eye illnesses.",
+        "Outfit_Clue": "White gown with a red martyr's sash, holding a small dish with two eyes and a palm branch (or a wreath of candles on the head).",
+        "Secret_Pin": ""
+      },
+      {
+        "Bib_Number": 3,
+        "Kid_Name": "Teresa Anindh",
+        "Saint_Name": "St. Mariam Thresia",
+        "Category_Grade": "PreK-2",
+        "Saint_Clue": "An Indian Syro-Malabar Catholic mystic who received the stigmata and founded the Congregation of the Holy Family to help families and educate girls.",
+        "Outfit_Clue": "Traditional black and white religious habit of the Congregation of the Holy Family, holding a crucifix and rosary.",
+        "Secret_Pin": ""
+      },
+      {
+        "Bib_Number": 4,
+        "Kid_Name": "Maryann Philip",
+        "Saint_Name": "Mother Mary",
+        "Category_Grade": "PreK-2",
+        "Saint_Clue": "The Blessed Virgin Mary, Mother of Jesus Christ and Queen of Heaven.",
+        "Outfit_Clue": "White tunic with a flowing blue mantle and veil, often wearing a crown of twelve stars or holding a rosary.",
+        "Secret_Pin": ""
+      },
+      {
+        "Bib_Number": 5,
+        "Kid_Name": "Jacob Vincent",
+        "Saint_Name": "St. Matthew",
+        "Category_Grade": "PreK-2",
+        "Saint_Clue": "A former tax collector from Capernaum who left his booth to follow Jesus, becoming one of the Twelve Apostles and author of the first Gospel.",
+        "Outfit_Clue": "First-century Biblical tunic and cloak, holding a Gospel book or scroll, quill pen, and a small money bag.",
+        "Secret_Pin": ""
+      },
+      {
+        "Bib_Number": 6,
+        "Kid_Name": "Andrea Pravin",
+        "Saint_Name": "St. Rose",
+        "Category_Grade": "PreK-2",
+        "Saint_Clue": "St. Rose of Lima, the first canonized saint of the Americas, a Dominican tertiary known for her deep devotion to the poor and care for the sick in Peru.",
+        "Outfit_Clue": "White tunic with a black veil and mantle (Dominican tertiary habit), wearing a crown of roses on her head.",
+        "Secret_Pin": ""
+      },
+      {
+        "Bib_Number": 7,
+        "Kid_Name": "Alphonsa Sinish",
+        "Saint_Name": "St. Jacinta Marto",
+        "Category_Grade": "PreK-2",
+        "Saint_Clue": "The youngest of the three shepherd children of Fátima, Portugal, who witnessed apparitions of the Virgin Mary in 1917 and offered sacrifices for sinners.",
+        "Outfit_Clue": "Simple early-20th-century Portuguese peasant dress with an apron, headscarf, and holding a wooden rosary.",
+        "Secret_Pin": ""
+      },
+      {
+        "Bib_Number": 8,
+        "Kid_Name": "Zarah Nithin",
+        "Saint_Name": "St. Gabriel the Archangel",
+        "Category_Grade": "PreK-2",
+        "Saint_Clue": "The heavenly messenger of God who announced the birth of John the Baptist to Zechariah and the Incarnation of Jesus to the Virgin Mary.",
+        "Outfit_Clue": "Long white and gold robe with large angel wings, holding a white lily, a trumpet, or a herald's staff.",
+        "Secret_Pin": ""
+      },
+      {
+        "Bib_Number": 9,
+        "Kid_Name": "John Paul Josey",
+        "Saint_Name": "St. Juan Diego",
+        "Category_Grade": "PreK-2",
+        "Saint_Clue": "An indigenous Chichimeca peasant in Mexico to whom Our Lady of Guadalupe appeared on Tepeyac Hill in 1531.",
+        "Outfit_Clue": "Simple white cotton tunic and pants, wearing a woven tilma (cloak) displaying the image of Our Lady of Guadalupe filled with red roses.",
+        "Secret_Pin": ""
+      },
+      {
+        "Bib_Number": 10,
+        "Kid_Name": "Luca Lirin",
+        "Saint_Name": "St. Joseph",
+        "Category_Grade": "PreK-2",
+        "Saint_Clue": "The humble carpenter of Nazareth, earthly spouse of the Virgin Mary, and foster father of Jesus; patron of the Universal Church and workers.",
+        "Outfit_Clue": "Brown and tan Biblical robes and mantle, holding a carpenter's square or saw and a staff blossoming with white lilies.",
+        "Secret_Pin": ""
+      },
+      {
+        "Bib_Number": 11,
+        "Kid_Name": "Theodora George",
+        "Saint_Name": "St. Zita of Lucca",
+        "Category_Grade": "PreK-2",
+        "Saint_Clue": "An Italian domestic servant for the Fatinelli family for 48 years, renowned for her generosity to the poor; once, bread in her apron miraculously turned into flowers.",
+        "Outfit_Clue": "Modest medieval servant dress with a white apron filled with loaves of bread or flowers, and a bundle of household keys hanging from the waist.",
+        "Secret_Pin": ""
+      },
+      {
+        "Bib_Number": 12,
+        "Kid_Name": "Jennah Jinu",
+        "Saint_Name": "St. Bernadette of Lourdes",
+        "Category_Grade": "PreK-2",
+        "Saint_Clue": "A humble miller's daughter in Lourdes, France, to whom the Blessed Virgin Mary (the Immaculate Conception) appeared 18 times in a grotto in 1858.",
+        "Outfit_Clue": "19th-century French peasant dress with a white headscarf/capulet and shawl (or a black and white Sister of Charity of Nevers habit), holding a candle and rosary.",
+        "Secret_Pin": ""
+      },
+      {
+        "Bib_Number": 13,
+        "Kid_Name": "Izahaak Yogia veedu",
+        "Saint_Name": "St. John Paul II*",
+        "Category_Grade": "PreK-2",
+        "Saint_Clue": "Born Karol Wojtyła in Poland, he served as Pope from 1978 to 2005, tirelessly traveling the globe, inspiring youth through World Youth Day, and helping end Communism.",
+        "Outfit_Clue": "White papal cassock with a shoulder cape (pellegrina), white skullcap (zucchetto), pectoral cross, and carrying the curved papal ferula (cross staff).",
+        "Secret_Pin": ""
+      },
+      {
+        "Bib_Number": 14,
+        "Kid_Name": "Nathan Ebin",
+        "Saint_Name": "St. John Bosco (Don Bosco)",
+        "Category_Grade": "PreK-2",
+        "Saint_Clue": "An Italian priest and educator who dedicated his life to poor and disadvantaged youth in Turin, founding the Salesian Society and teaching with love rather than punishment.",
+        "Outfit_Clue": "Black priest's cassock with a white Roman collar and biretta cap, holding a Bible or juggling balls/books used to gather youth.",
+        "Secret_Pin": ""
+      },
+      {
+        "Bib_Number": 15,
+        "Kid_Name": "Noah Abby",
+        "Saint_Name": "St. Jude Thaddeus",
+        "Category_Grade": "PreK-2",
+        "Saint_Clue": "One of the Twelve Apostles and a relative of Jesus, venerated as the patron saint of lost causes and desperate situations.",
+        "Outfit_Clue": "White tunic with a green cloak, wearing a large gold medallion bearing the image of Jesus (the Mandylion) around his neck, and a flame of the Holy Spirit above his head.",
+        "Secret_Pin": ""
+      },
+      {
+        "Bib_Number": 16,
+        "Kid_Name": "Jude Jerin",
+        "Saint_Name": "St. Josemaría Escrivá",
+        "Category_Grade": "PreK-2",
+        "Saint_Clue": "A Spanish Catholic priest who founded Opus Dei in 1928, teaching that everyone is called to holiness through their ordinary daily work and duties.",
+        "Outfit_Clue": "Black traditional priest's cassock with a Roman collar, round black-rimmed glasses, and holding a copy of his spiritual book 'The Way' or a briefcase.",
+        "Secret_Pin": ""
+      },
+      {
+        "Bib_Number": 17,
+        "Kid_Name": "Thomas Anindh",
+        "Saint_Name": "St. Dominic Savio*",
+        "Category_Grade": "PreK-2",
+        "Saint_Clue": "An Italian teenager and student of St. John Bosco who lived by the motto 'Death rather than sin' and became one of the youngest non-martyr saints.",
+        "Outfit_Clue": "19th-century Italian schoolboy suit (dark jacket, vest, trousers, and cravat/tie), holding a small prayer book, crucifix, and rosary.",
+        "Secret_Pin": ""
+      },
+      {
+        "Bib_Number": 18,
+        "Kid_Name": "Leann Arun",
+        "Saint_Name": "St. Agnes of Rome*",
+        "Category_Grade": "PreK-2",
+        "Saint_Clue": "A twelve-year-old Roman noble girl who refused to renounce her Christian faith or her vow of chastity, dying as a martyr around 304 AD.",
+        "Outfit_Clue": "Flowing white Roman tunic with a red martyr's mantle, holding a plush white lamb and a martyr's palm branch.",
+        "Secret_Pin": ""
+      },
+      {
+        "Bib_Number": 19,
+        "Kid_Name": "Elisa Ann Thirunnilath",
+        "Saint_Name": "St. Philomena of Rome*",
+        "Category_Grade": "PreK-2",
+        "Saint_Clue": "A young early Christian virgin martyr, known as the 'Wonder-Worker', whose remains were discovered in the Catacombs of Priscilla in Rome in 1802.",
+        "Outfit_Clue": "Red and white classical gown with a blue mantle, wearing a crown of flowers and holding an anchor, arrows, and a palm branch.",
+        "Secret_Pin": ""
+      },
+      {
+        "Bib_Number": 20,
+        "Kid_Name": "Leo Anumodh",
+        "Saint_Name": "St. Joseph",
+        "Category_Grade": "PreK-2",
+        "Saint_Clue": "The humble carpenter of Nazareth, earthly spouse of the Virgin Mary, and foster father of Jesus; patron of the Universal Church and workers.",
+        "Outfit_Clue": "Brown and tan Biblical robes and mantle, holding a carpenter's square or saw and a staff blossoming with white lilies.",
+        "Secret_Pin": ""
+      },
+      {
+        "Bib_Number": 21,
+        "Kid_Name": "Evelyn Joey",
+        "Saint_Name": "St. Gianna Beretta Molla",
+        "Category_Grade": "PreK-2",
+        "Saint_Clue": "A 20th-century Italian pediatrician, wife, and mother who heroically sacrificed her own life during pregnancy to save the life of her fourth child.",
+        "Outfit_Clue": "Mid-20th-century modest dress or suit with a white doctor's lab coat and stethoscope, holding a baby doll.",
+        "Secret_Pin": ""
+      },
+      {
+        "Bib_Number": 22,
+        "Kid_Name": "Jovana Ann Sijo",
+        "Saint_Name": "St. Teresa of Calcutta (Mother Teresa)",
+        "Category_Grade": "PreK-2",
+        "Saint_Clue": "An Albanian-Indian religious sister who founded the Missionaries of Charity in Calcutta, dedicating her life to serving the 'poorest of the poor'.",
+        "Outfit_Clue": "White cotton sari featuring three distinctive blue stripes along the border, a small crucifix pinned to the left shoulder, and sandals.",
+        "Secret_Pin": ""
+      },
+      {
+        "Bib_Number": 23,
+        "Kid_Name": "Hazel Joey",
+        "Saint_Name": "St. Elizabeth of Hungary*",
+        "Category_Grade": "PreK-2",
+        "Saint_Clue": "A 13th-century Hungarian princess and landgravine who used her royal wealth to build hospitals and feed the poor; loaves of bread in her cloak famously turned into roses.",
+        "Outfit_Clue": "Medieval royal gown with a crown and cloak, holding a basket or apron filled with loaves of bread and red/white roses.",
+        "Secret_Pin": ""
+      },
+      {
+        "Bib_Number": 24,
+        "Kid_Name": "Jon Louie Jojan",
+        "Saint_Name": "St. John",
+        "Category_Grade": "PreK-2",
+        "Saint_Clue": "St. John the Apostle and Evangelist, the 'Beloved Disciple' who stood at the foot of the Cross, cared for Mary, and wrote the fourth Gospel and Book of Revelation.",
+        "Outfit_Clue": "Biblical red mantle over a green or white tunic, holding a Gospel book/scroll and a chalice with a small snake emerging from it.",
+        "Secret_Pin": ""
+      },
+      {
+        "Bib_Number": 25,
+        "Kid_Name": "Ivana Teresa Tom",
+        "Saint_Name": "St. Agnes of Rome*",
+        "Category_Grade": "PreK-2",
+        "Saint_Clue": "A twelve-year-old Roman noble girl who refused to renounce her Christian faith or her vow of chastity, dying as a martyr around 304 AD.",
+        "Outfit_Clue": "Flowing white Roman tunic with a red martyr's mantle, holding a plush white lamb and a martyr's palm branch.",
+        "Secret_Pin": ""
+      },
+      {
+        "Bib_Number": 26,
+        "Kid_Name": "Alex Joseph",
+        "Saint_Name": "St. Patrick",
+        "Category_Grade": "PreK-2",
+        "Saint_Clue": "A 5th-century missionary bishop and the primary patron saint of Ireland, who used the three-leafed shamrock to explain the Holy Trinity to the Irish people.",
+        "Outfit_Clue": "Green and gold bishop's vestments with a tall mitre hat, carrying a bishop's crozier (staff) and a three-leaf shamrock.",
+        "Secret_Pin": ""
+      },
+      {
+        "Bib_Number": 27,
+        "Kid_Name": "Johanna Augustin",
+        "Saint_Name": "St. Faustina Kowalska",
+        "Category_Grade": "Grade 3-5",
+        "Saint_Clue": "A Polish religious sister and mystic of the 20th century to whom Jesus appeared as the King of Divine Mercy, inspiring the Divine Mercy image and chaplet.",
+        "Outfit_Clue": "Black religious habit with a white collar/coif and black veil of the Sisters of Our Lady of Mercy, holding the framed 'Jesus, I Trust in You' Divine Mercy picture.",
+        "Secret_Pin": ""
+      },
+      {
+        "Bib_Number": 28,
+        "Kid_Name": "Ethan Sujith",
+        "Saint_Name": "St. Maximilian Kolbe",
+        "Category_Grade": "Grade 3-5",
+        "Saint_Clue": "A Polish Conventual Franciscan friar who promoted devotion to the Immaculata, ran a major Catholic publishing house, and volunteered to die in place of a stranger with a family in Auschwitz.",
+        "Outfit_Clue": "Black Franciscan habit with a white cord, or a striped concentration camp prisoner uniform/jacket over a friar's habit, wearing round wire-rimmed glasses and holding a Miraculous Medal.",
+        "Secret_Pin": ""
+      },
+      {
+        "Bib_Number": 29,
+        "Kid_Name": "Joanna Nithin",
+        "Saint_Name": "St. Alphonsa",
+        "Category_Grade": "Grade 3-5",
+        "Saint_Clue": "St. Alphonsa of the Immaculate Conception, a Franciscan Clarist sister from Kerala, India, and the first woman of Indian origin to be canonized, known for offering her lifelong physical sufferings with joy.",
+        "Outfit_Clue": "Black and white religious habit and veil of the Franciscan Clarist Congregation, holding a crucifix and rosary.",
+        "Secret_Pin": ""
+      },
+      {
+        "Bib_Number": 30,
+        "Kid_Name": "Sebastian Scaria",
+        "Saint_Name": "St. John Paul II*",
+        "Category_Grade": "Grade 3-5",
+        "Saint_Clue": "Born Karol Wojtyła in Poland, he served as Pope from 1978 to 2005, tirelessly traveling the globe, inspiring youth through World Youth Day, and helping end Communism.",
+        "Outfit_Clue": "White papal cassock with a shoulder cape (pellegrina), white skullcap (zucchetto), pectoral cross, and carrying the curved papal ferula (cross staff).",
+        "Secret_Pin": ""
+      },
+      {
+        "Bib_Number": 31,
+        "Kid_Name": "Claire Jerin",
+        "Saint_Name": "St. Clare of Assisi",
+        "Category_Grade": "Grade 3-5",
+        "Saint_Clue": "An Italian noblewoman who left her wealth to follow St. Francis of Assisi, founding the Order of Poor Ladies (Poor Clares) and once repelling invaders from her convent by holding up the Blessed Sacrament.",
+        "Outfit_Clue": "Brown or grey Poor Clare habit with a white rope cincture (belt) and black veil over a white wimple, holding a golden monstrance.",
+        "Secret_Pin": ""
+      },
+      {
+        "Bib_Number": 32,
+        "Kid_Name": "Patrick George",
+        "Saint_Name": "St. Padre Pio*",
+        "Category_Grade": "Grade 3-5",
+        "Saint_Clue": "St. Pio of Pietrelcina, an Italian Capuchin Franciscan priest famous for bearing the visible wounds of Christ (stigmata) for 50 years and spending up to 15 hours a day hearing confessions.",
+        "Outfit_Clue": "Brown Capuchin Franciscan hooded habit with a white rope cord, a white priestly stole, a beard, and brown fingerless mittens covering the stigmata on his hands.",
+        "Secret_Pin": ""
+      },
+      {
+        "Bib_Number": 33,
+        "Kid_Name": "George Puthokaran",
+        "Saint_Name": "St. Luigi Scrosoppi",
+        "Category_Grade": "Grade 3-5",
+        "Saint_Clue": "A 19th-century Italian priest of the Oratory who dedicated his life to caring for orphans and deaf-mute girls, founded the Sisters of Providence, and is the patron saint of soccer/football players.",
+        "Outfit_Clue": "Black priestly cassock with a white preaching bands collar and pectoral cross, holding a classic soccer ball (football) or a loaf of bread for orphans.",
+        "Secret_Pin": ""
+      },
+      {
+        "Bib_Number": 34,
+        "Kid_Name": "Iza Jaison",
+        "Saint_Name": "St. Dorothy",
+        "Category_Grade": "Grade 3-5",
+        "Saint_Clue": "A 4th-century virgin martyr of Caesarea who was mocked on her way to execution about the gardens of Paradise, and miraculously sent a basket of heavenly apples and roses in mid-winter.",
+        "Outfit_Clue": "Early Christian Roman gown and mantle, wearing a crown of flowers and carrying a small basket filled with three apples and three roses.",
+        "Secret_Pin": ""
+      },
+      {
+        "Bib_Number": 35,
+        "Kid_Name": "George Josey",
+        "Saint_Name": "St. George",
+        "Category_Grade": "Grade 3-5",
+        "Saint_Clue": "A 4th-century Christian Roman soldier from Cappadocia who was martyred for refusing to recant his faith, famously depicted in Christian tradition slaying a dragon to save a town.",
+        "Outfit_Clue": "Silver knight's tunic or armor featuring a white tabard/surcoat with a bold red cross (St. George's Cross), carrying a shield, toy sword/lance, and a small plush dragon.",
+        "Secret_Pin": ""
+      },
+      {
+        "Bib_Number": 36,
+        "Kid_Name": "Johan Joby",
+        "Saint_Name": "St. Bernardine of Siena*",
+        "Category_Grade": "Grade 3-5",
+        "Saint_Clue": "A 15th-century Italian Franciscan missionary and preacher known as the 'Apostle of Italy,' who revived Catholic faith and spread devotion to the Most Holy Name of Jesus.",
+        "Outfit_Clue": "Brown Franciscan friar's habit with a knotted white cord belt, holding a circular plaque or sunburst tablet inscribed with the golden letters 'IHS'.",
+        "Secret_Pin": ""
+      },
+      {
+        "Bib_Number": 37,
+        "Kid_Name": "Hanna Kavalakkatt",
+        "Saint_Name": "St. Maria Goretti*",
+        "Category_Grade": "Grade 3-5",
+        "Saint_Clue": "An eleven-year-old Italian farm girl who died in 1902 defending her purity and heroically forgave her attacker on her deathbed, leading to his conversion.",
+        "Outfit_Clue": "Simple early-20th-century rural Italian peasant dress with an apron and headscarf, holding a bundle of fourteen white lilies and a martyr's palm.",
+        "Secret_Pin": ""
+      },
+      {
+        "Bib_Number": 38,
+        "Kid_Name": "Michael Praveen",
+        "Saint_Name": "St. Raymond Nonnatus",
+        "Category_Grade": "Grade 3-5",
+        "Saint_Clue": "A 13th-century Spanish Mercedarian priest who traveled to North Africa to ransom Christian captives and offered himself as a hostage; patron saint of childbirth, midwives, and pregnant women.",
+        "Outfit_Clue": "White tunic and scapular of the Mercedarian Order (featuring the red and gold shield badge) under a red cardinal's cape, holding a monstrance and a palm branch with three crowns.",
+        "Secret_Pin": ""
+      },
+      {
+        "Bib_Number": 39,
+        "Kid_Name": "Jeslin Joby",
+        "Saint_Name": "St. Agatha",
+        "Category_Grade": "Grade 6-8",
+        "Saint_Clue": "A 3rd-century noble virgin martyr of Catania, Sicily, who remained steadfast in her Christian faith despite severe torture; patron saint of bellfounders, nurses, and breast cancer patients.",
+        "Outfit_Clue": "Classical tunic with a red or pink martyr's cloak and veil, holding a palm branch and a tray/platter (often depicted with two small loaves of bread or bells for children).",
+        "Secret_Pin": ""
+      },
+      {
+        "Bib_Number": 40,
+        "Kid_Name": "Antony Sujith Rockey",
+        "Saint_Name": "St. Giuseppe Moscati",
+        "Category_Grade": "Grade 6-8",
+        "Saint_Clue": "An early-20th-century Italian medical doctor, researcher, and professor in Naples who treated poor patients free of charge and often slipped money into their prescriptions.",
+        "Outfit_Clue": "Early-20th-century three-piece suit and tie (or a white physician's coat) with a black doctor's bag, stethoscope, small mustache, and pince-nez/round glasses.",
+        "Secret_Pin": ""
+      },
+      {
+        "Bib_Number": 41,
+        "Kid_Name": "Noah",
+        "Saint_Name": "St. Pier Giorgio Frassati",
+        "Category_Grade": "Grade 6-8",
+        "Saint_Clue": "A joyful young Italian layman and avid mountaineer of the 1920s, known as the 'Man of the Beatitudes,' who secretly served the poor of Turin while living a vibrant outdoor and spiritual life.",
+        "Outfit_Clue": "1920s tweed jacket or sweater, hiking knickers/trousers, hiking boots, climbing rope, an ice axe or walking stick, and a rosary.",
+        "Secret_Pin": ""
+      },
+      {
+        "Bib_Number": 42,
+        "Kid_Name": "Alina Arun",
+        "Saint_Name": "St. Mary Magdalene",
+        "Category_Grade": "Grade 6-8",
+        "Saint_Clue": "A devoted follower of Jesus who stood by Him at the Crucifixion and was the first witness to His Resurrection on Easter morning, earning her the title 'Apostle to the Apostles.'",
+        "Outfit_Clue": "Flowing first-century Biblical dress and red or purple mantle, holding an alabaster jar of ointment/perfume (or a red Easter egg).",
+        "Secret_Pin": ""
+      },
+      {
+        "Bib_Number": 43,
+        "Kid_Name": "Raechel Harrison",
+        "Saint_Name": "St. Philomena of Rome*",
+        "Category_Grade": "Grade 6-8",
+        "Saint_Clue": "A young early Christian virgin martyr, known as the 'Wonder-Worker', whose remains were discovered in the Catacombs of Priscilla in Rome in 1802.",
+        "Outfit_Clue": "Red and white classical gown with a blue mantle, wearing a crown of flowers and holding an anchor, arrows, and a palm branch.",
+        "Secret_Pin": ""
+      },
+      {
+        "Bib_Number": 44,
+        "Kid_Name": "Ava Thomas",
+        "Saint_Name": "St. Cecilia",
+        "Category_Grade": "Grade 6-8",
+        "Saint_Clue": "A 2nd/3rd-century Roman noblewoman and virgin martyr who sang to God in her heart during her wedding and converted her husband Valerian; patron saint of musicians.",
+        "Outfit_Clue": "Richly draped Roman tunic and mantle with a floral wreath or turban on her head, holding a small portable pipe organ, harp, or violin.",
+        "Secret_Pin": ""
+      },
+      {
+        "Bib_Number": 45,
+        "Kid_Name": "Alicia Chacko",
+        "Saint_Name": "St. Kateri Tekakwitha*",
+        "Category_Grade": "Grade 6-8",
+        "Saint_Clue": "Known as the 'Lily of the Mohawks,' a 17th-century Algonquin-Mohawk woman who converted to Catholicism, took a vow of perpetual virginity, and lived a life of deep prayer and penance in Canada.",
+        "Outfit_Clue": "Traditional Native American fringed buckskin dress with beaded moccasins and a blanket shawl, holding a handmade wooden cross made of two twigs and a white lily.",
+        "Secret_Pin": ""
+      },
+      {
+        "Bib_Number": 46,
+        "Kid_Name": "Steven Joseph",
+        "Saint_Name": "St. John of the Cross",
+        "Category_Grade": "Grade 6-8",
+        "Saint_Clue": "A 16th-century Spanish mystic, poet, Doctor of the Church, and friar who worked alongside St. Teresa of Ávila to reform the Carmelite Order, founding the Discalced Carmelites.",
+        "Outfit_Clue": "Brown Carmelite tunic and scapular with a short white hooded mantle (cloak), holding a large crucifix and a book of mystical writings with a quill.",
+        "Secret_Pin": ""
+      },
+      {
+        "Bib_Number": 47,
+        "Kid_Name": "Joanna Jimmy",
+        "Saint_Name": "St. Helen",
+        "Category_Grade": "Grade 6-8",
+        "Saint_Clue": "Empress of the Roman Empire and mother of Emperor Constantine the Great, who traveled to Jerusalem in the 4th century and discovered the True Cross of Jesus.",
+        "Outfit_Clue": "Royal purple and gold Roman Empress robes with a jeweled imperial crown and veil, holding a large wooden Cross.",
+        "Secret_Pin": ""
+      }
+    ];
 
     const POINTS_PER_CORRECT = 10;
     const CLUE_PENALTY_POINTS = 2;
@@ -828,8 +1254,8 @@
     let appState = {
       currentView: 'registration',
       selectedOption: 'Find Saint by Kid Name', // 'Find Saint by Kid Name' | 'Find Kid by Saint Name'
-      cloudSyncLoading: true,
-      roster: [],
+      cloudSyncLoading: false,
+      roster: JSON.parse(JSON.stringify(DEFAULT_ROSTER)),
       submissions: [],
       settings: {
         webhookUrl: '',
@@ -983,7 +1409,6 @@
 
     function loadPersistedState() {
       try {
-        // Purge all legacy sample/demo cache keys so only Google Sheet data is used
         localStorage.removeItem('whos_that_saint_roster_v2');
         localStorage.removeItem('whos_that_saint_roster');
         localStorage.removeItem('whos_that_saint_submissions');
@@ -1002,19 +1427,38 @@
         if (!appState.settings.webhookUrl) {
           appState.settings.webhookUrl = getActiveCloudUrl();
         }
-        appState.roster = [];
+
+        // Load persisted roster or fall back immediately to official 47-kid SaintList
+        const savedRoster = localStorage.getItem(STORAGE_KEYS.ROSTER);
+        if (savedRoster) {
+          try {
+            const parsedRoster = JSON.parse(savedRoster);
+            if (Array.isArray(parsedRoster) && parsedRoster.length > 0) {
+              appState.roster = parsedRoster;
+            } else {
+              appState.roster = JSON.parse(JSON.stringify(DEFAULT_ROSTER));
+            }
+          } catch (e) {
+            appState.roster = JSON.parse(JSON.stringify(DEFAULT_ROSTER));
+          }
+        } else {
+          appState.roster = JSON.parse(JSON.stringify(DEFAULT_ROSTER));
+        }
+
         appState.submissions = [];
       } catch (err) {
         console.error('Error loading state:', err);
+        appState.roster = JSON.parse(JSON.stringify(DEFAULT_ROSTER));
       }
     }
 
     function saveRosterToStorage() {
+      try {
+        localStorage.setItem(STORAGE_KEYS.ROSTER, JSON.stringify(appState.roster));
+      } catch (e) {}
       const badge = document.getElementById('rosterCountBadge');
       if (badge) {
-        badge.textContent = appState.cloudSyncLoading
-          ? 'Syncing Sheet...'
-          : `${appState.roster.length} Kids Ready`;
+        badge.textContent = `${appState.roster.length} Kids Ready`;
       }
     }
 
@@ -1425,7 +1869,7 @@
      **************************************************************/
     function setBibRangeFilter(range) {
       appState.session.bibRangeFilter = range;
-      const ranges = ['ALL', '1-25', '26-50', '51-75', '76-100'];
+      const ranges = ['ALL', '1-25', '26-50'];
       ranges.forEach(r => {
         const btn = document.getElementById(`rangeBtn${r}`);
         if (btn) {
@@ -2419,8 +2863,8 @@
             renderActivityOptionsUI();
           }
 
-          // 2. Apply Roster & Outfit Clues from Cloud Sheet
-          if (Array.isArray(data.roster)) {
+          // 2. Apply Roster & Outfit Clues from Cloud Sheet (only when sheet has rows)
+          if (Array.isArray(data.roster) && data.roster.length > 0) {
             appState.roster = data.roster.map((r, i) => ({
               Bib_Number: Number(r.Bib_Number || (i + 1)),
               Kid_Name: String(r.Kid_Name || ''),
