@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -1351,15 +1354,9 @@
     }
 
     function setupAutoFullscreenListeners() {
-      // Trigger automatically on first user tap/interaction on the page
-      const autoTrigger = (e) => {
-        const tag = (e.target && e.target.tagName) ? e.target.tagName.toUpperCase() : '';
-        if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || tag === 'BUTTON') return;
-        if (!isCurrentlyFullScreen()) {
-          requestMobileFullScreen();
-        }
-      };
-      document.addEventListener('pointerdown', autoTrigger, { passive: true, once: true });
+      // Mobile native viewport: Styled with height: 100dvh & viewport-fit=cover.
+      // We avoid calling requestFullscreen() on tap so Android Chrome never displays
+      // the intrusive "To exit full screen, drag from top" system notice.
     }
 
     function openShareQrModal() {
@@ -1406,6 +1403,14 @@
       switchView('registration');
       setupAutoFullscreenListeners();
       refreshCloudData(false);
+
+      // Real-time Cross-Device Multi-User Sync: Silently poll Google Sheet every 12 seconds
+      // so all participant devices stay in sync with live scores and rankings
+      setInterval(() => {
+        if (!appState.session.active) {
+          refreshCloudData(false);
+        }
+      }, 12000);
     });
 
     function loadPersistedState() {
@@ -1425,6 +1430,23 @@
             option2_SaintToKid: parsed.option2_SaintToKid !== undefined ? Boolean(parsed.option2_SaintToKid) : true
           };
         }
+
+        // Support URL parameter override for instant cloud sync onboarding (?sync=... or ?key=...)
+        try {
+          const urlParams = new URLSearchParams(window.location.search);
+          const syncParam = urlParams.get('sync') || urlParams.get('key');
+          if (syncParam) {
+            let cleanUrl = syncParam.trim();
+            if (!cleanUrl.startsWith('http') && cleanUrl.length > 20) {
+              try { cleanUrl = atob(cleanUrl); } catch (e) {}
+            }
+            if (cleanUrl.startsWith('http')) {
+              appState.settings.webhookUrl = cleanUrl;
+              localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(appState.settings));
+            }
+          }
+        } catch (urlErr) {}
+
         if (!appState.settings.webhookUrl) {
           appState.settings.webhookUrl = getActiveCloudUrl();
         }
@@ -2464,6 +2486,7 @@
     function showLeaderboardView() {
       document.getElementById('personalResultCard')?.classList.add('hidden');
       switchView('results');
+      refreshCloudData(false);
     }
 
     function getSortedSubmissions(submissionsArray) {
@@ -2935,7 +2958,23 @@
       try {
         const sep = activeUrl.includes('?') ? '&' : '?';
         const res = await fetch(`${activeUrl}${sep}_t=${Date.now()}`, { redirect: 'follow' });
-        const data = await res.json();
+        const rawText = await res.text();
+        if (rawText.includes('Script function not found')) {
+          if (notify) {
+            showToast("Apps Script Web App needs 'New Version' deployment!", "error");
+          }
+          console.warn("Apps Script deployment is outdated: doGet not found.");
+          renderLeaderboardAndAppreciation();
+          return;
+        }
+        let data;
+        try {
+          data = JSON.parse(rawText);
+        } catch (je) {
+          if (notify) showToast("Could not parse cloud data. Using local storage.", "error");
+          renderLeaderboardAndAppreciation();
+          return;
+        }
         if (data && data.status === 'success') {
           // 1. Apply Admin Option Enable/Disable Settings from Cloud Sheet
           if (data.config && typeof data.config === 'object') {
