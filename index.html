@@ -416,6 +416,27 @@
 
       <!-- ADMIN TAB 1: CLOUD & CSV DATA MANAGER -->
       <div id="adminTabPanel1" class="w-full rounded-xl p-3 bg-white border-2 border-slate-300 space-y-3">
+        <!-- QR Code & Short URL Parish Hall Share Box -->
+        <div class="w-full rounded-xl p-3 bg-amber-50/90 border-2 border-amber-400 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div class="space-y-1 text-center sm:text-left">
+            <h3 class="text-sm sm:text-base font-black text-royal-900">📱 Parishioner QR Code &amp; Short URLs</h3>
+            <p class="text-xs text-slate-700 font-semibold">Scan with any phone camera to launch in Full-Screen mode:</p>
+            <div class="text-xs font-mono space-y-0.5 pt-0.5">
+              <div><strong>Easy Short Link:</strong> <a href="https://is.gd/whosthatsaint2026" target="_blank" class="text-royal-800 underline font-extrabold">https://is.gd/whosthatsaint2026</a></div>
+              <div><strong>TinyURL Link:</strong> <a href="https://tinyurl.com/2yozrgy4" target="_blank" class="text-royal-800 underline font-extrabold">https://tinyurl.com/2yozrgy4</a></div>
+              <div><strong>Direct App Link:</strong> <a href="https://jimmymj.github.io/whos-that-saint/" target="_blank" class="text-royal-800 underline font-bold">https://jimmymj.github.io/whos-that-saint/</a></div>
+            </div>
+          </div>
+          <div class="flex flex-col items-center gap-1.5 shrink-0">
+            <img src="whos-that-saint-qr.png" onerror="this.src='https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=10&color=4a1c11&bgcolor=fdf8f0&data=https%3A%2F%2Fjimmymj.github.io%2Fwhos-that-saint%2F'"
+              alt="Who's That Saint QR Code" class="w-28 h-28 rounded-xl border-2 border-royal-900 shadow-sm bg-white p-1" />
+            <a href="whos-that-saint-qr.png" download="whos-that-saint-qr.png"
+              class="px-2.5 py-1 rounded-lg bg-royal-900 text-amber-300 font-extrabold text-[11px] shadow active:scale-[0.99]">
+              ⬇ Download QR PNG
+            </a>
+          </div>
+        </div>
+
         <h3 class="text-base font-extrabold text-royal-900 border-b pb-1.5">Cloud Webhook &amp; Google Sheet Sync</h3>
         <div class="space-y-2">
           <label for="inputWebhookUrl" class="block text-xs font-extrabold text-slate-700 uppercase">
