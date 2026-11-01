@@ -12,7 +12,8 @@
   <meta name="apple-mobile-web-app-title" content="Who’s That Saint?">
   <meta name="application-name" content="Who’s That Saint?">
   <meta name="theme-color" content="#4a1c11">
-  <link rel="manifest" href='data:application/manifest+json,{"name":"Who%E2%80%99s%20That%20Saint%3F","short_name":"Who%E2%80%99s%20That%20Saint","start_url":".","display":"fullscreen","orientation":"portrait","background_color":"#fdf8f0","theme_color":"#4a1c11"}'>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="whos-that-saint-qr.png">
   <title>Who’s That Saint? — All Saints' Day Find Activity</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -122,6 +123,11 @@
         <button id="btnSwitchView" onclick="handleQuickSwitchButton()"
           class="min-h-[36px] px-2.5 py-1 rounded-xl bg-royal-950/60 hover:bg-royal-950 text-amber-200 border border-amber-400/40 text-xs font-extrabold active:scale-[0.98]">
           🏆 Ranks
+        </button>
+        <button id="btnToggleFullscreen" onclick="toggleAppFullScreen()" aria-label="Toggle Fullscreen"
+          class="min-h-[36px] w-9 rounded-xl bg-royal-950/60 hover:bg-royal-950 text-amber-200 border border-amber-400/30 text-sm font-bold flex items-center justify-center active:scale-[0.98]"
+          title="Open Fullscreen without browser address bar">
+          ⛶
         </button>
         <button id="btnAdminToggle" onclick="openAdminGate()" aria-label="Admin Settings"
           class="min-h-[36px] w-9 rounded-xl bg-royal-950/60 hover:bg-royal-950 text-amber-100 border border-amber-400/30 text-sm font-bold flex items-center justify-center active:scale-[0.98]">
@@ -732,6 +738,16 @@
           <span class="font-sans font-extrabold text-royal-900">Alt Link:</span>
           <a href="https://tinyurl.com/2yozrgy4" target="_blank" class="text-royal-800 underline font-extrabold truncate">tinyurl.com/2yozrgy4</a>
         </div>
+      </div>
+      <!-- Mobile Native App Instructions (No address bar) -->
+      <div class="rounded-xl bg-amber-100/70 border border-amber-300 p-2 text-xs text-left space-y-1">
+        <p class="font-black text-royal-950 flex items-center gap-1">
+          <span>📲</span> <span>Open Without Address Bar:</span>
+        </p>
+        <p class="text-[11px] text-slate-700 leading-tight">
+          <strong>iPhone / Safari:</strong> Tap Share icon <span class="font-bold">⎋</span> &rarr; tap <strong>"Add to Home Screen"</strong>.<br/>
+          <strong>Android / Chrome:</strong> Tap menu <span class="font-bold">⋮</span> &rarr; tap <strong>"Install App" / "Add to Home screen"</strong>.
+        </p>
       </div>
       <div class="grid grid-cols-2 gap-2 pt-1">
         <button type="button" onclick="shareAppWithFriends()"
@@ -1569,10 +1585,37 @@
       } catch (err) {}
     }
 
+    function toggleAppFullScreen() {
+      if (isCurrentlyFullScreen()) {
+        try {
+          if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+          else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+          else if (document.msExitFullscreen) document.msExitFullscreen();
+        } catch (e) {}
+      } else {
+        requestMobileFullScreen();
+      }
+    }
+
     function setupAutoFullscreenListeners() {
-      // Mobile native viewport: Styled with height: 100dvh & viewport-fit=cover.
-      // We avoid calling requestFullscreen() on tap so Android Chrome never displays
-      // the intrusive "To exit full screen, drag from top" system notice.
+      // Auto-retract mobile address bar on initial load
+      setTimeout(() => {
+        window.scrollTo(0, 1);
+      }, 150);
+
+      // Register PWA service worker for native standalone mobile app view
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+      }
+
+      // Enter fullscreen on first user touch/tap on the page to hide browser address bar
+      const enterFullOnFirstTouch = () => {
+        if (!isCurrentlyFullScreen()) {
+          requestMobileFullScreen();
+        }
+      };
+      window.addEventListener('pointerup', enterFullOnFirstTouch, { once: true, passive: true });
+      window.addEventListener('click', enterFullOnFirstTouch, { once: true, passive: true });
     }
 
     function openShareQrModal() {
@@ -2028,6 +2071,8 @@
     }
 
     function startActivityFromRegistration() {
+      requestMobileFullScreen();
+
       if (appState.roster.length === 0) {
         showToast("No Kids & Saints found in Google Sheet yet. Please add entries in Admin or sync from Google Sheet!", "error");
         return;
