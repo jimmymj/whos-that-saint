@@ -7,15 +7,11 @@
  *   2. Quiz_Participants_Scores       (Centralized Participant Points Log)
  *   3. Live_Leaderboard_And_Kid_Stats (Automated Summary & Appreciation Dashboard)
  *
- * IMPORTANT — HOW TO UPDATE YOUR GOOGLE SHEET & WEB APP:
+ * HOW TO ACTIVATE ON YOUR EXISTING WEB APP URL:
  *   1. In your Google Sheet, click Extensions -> Apps Script.
  *   2. Replace ALL code in Code.gs with this entire file and press Ctrl + S (Save).
- *   3. Select "setupSheetStructure" in the top dropdown and click "Run".
- *      -> This immediately adds the "Outfit_Clue" column (Column F) to Roster_Saints_Kids
- *         and populates the Saint Outfit Clues right inside your Google Sheet!
- *   4. Click "Deploy" (top right) -> "New deployment" -> Select type: "Web app"
- *      -> Execute as: "Me", Who has access: "Anyone" -> Click "Deploy".
- *   5. Copy the NEW Web App URL and paste it into the App's Admin Tab 1 (PIN: 1101).
+ *   3. Click "Deploy" (top right) -> "Manage deployments" -> Click the Pencil icon (✏️ Edit)
+ *      -> Under "Version", select "New version" -> Click "Deploy".
  * ============================================================================
  */
 
@@ -46,10 +42,6 @@ const STARTER_KIDS_WITH_OUTFIT_CLUES = [
   [10, 'Mia Wilson', 'St. Cecilia', 'Grades 6-8', 'Early Roman martyr and patron saint of musicians and church music', 'Flowing Roman gown with flower crown, holding a small harp, violin, flute, or keyboard', '110']
 ];
 
-/**
- * Security Helper: Prevents Google Sheets Formula Injection (CSV/Sheet Injection)
- * and strips control characters / excessive length.
- */
 function sanitizeCellForSheet(rawVal, maxLen) {
   const limit = maxLen || 220;
   let str = String(rawVal === null || rawVal === undefined ? '' : rawVal).trim();
@@ -60,9 +52,6 @@ function sanitizeCellForSheet(rawVal, maxLen) {
   return str.substring(0, limit);
 }
 
-/**
- * Helper: Normalizes Participant_Name for case-insensitive uniqueness check.
- */
 function normalizeParticipantName(name) {
   return String(name || '')
     .replace(/^'+/, '')
@@ -72,9 +61,7 @@ function normalizeParticipantName(name) {
 }
 
 /**
- * 1. ONE-CLICK INITIALIZER & UPGRADER:
- *    Creates or upgrades all 3 tabs, adds the "Outfit_Clue" column (Column F)
- *    to Roster_Saints_Kids, and populates missing Outfit Clues automatically!
+ * 1. ONE-CLICK INITIALIZER & UPGRADER
  */
 function setupSheetStructure() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -82,13 +69,11 @@ function setupSheetStructure() {
     throw new Error('Please open Apps Script from inside your Google Sheet (Extensions -> Apps Script).');
   }
 
-  // --- TAB 1: Roster_Saints_Kids ---
   let rosterSheet = ss.getSheetByName(TAB_ROSTER);
   if (!rosterSheet) {
     rosterSheet = ss.insertSheet(TAB_ROSTER);
   }
 
-  // Write the 7 official headers (Bib_Number, Kid_Name, Saint_Name, Category_Grade, Saint_Clue, Outfit_Clue, Secret_Pin)
   rosterSheet.getRange(1, 1, 1, ROSTER_HEADERS.length)
     .setValues([ROSTER_HEADERS])
     .setFontWeight('bold')
@@ -98,11 +83,9 @@ function setupSheetStructure() {
 
   const lastRow = rosterSheet.getLastRow();
   if (lastRow <= 11) {
-    // Populate or upgrade the 10 starter rows with full Outfit_Clue data in Column F
     rosterSheet.getRange(2, 1, STARTER_KIDS_WITH_OUTFIT_CLUES.length, ROSTER_HEADERS.length)
       .setValues(STARTER_KIDS_WITH_OUTFIT_CLUES);
   } else {
-    // Upgrade any existing rows where Outfit_Clue (Column F) was previously Secret_Pin or blank
     const existingRange = rosterSheet.getRange(2, 1, lastRow - 1, ROSTER_HEADERS.length);
     const rows = existingRange.getValues();
     const updatedRows = rows.map(function(row, idx) {
@@ -114,7 +97,6 @@ function setupSheetStructure() {
       let outfitClue = String(row[5] || '').trim();
       let pin = String(row[6] || '').trim();
 
-      // If Column F looks like a 3-digit PIN from the older 6-column format, move it to Column G!
       if (/^\d{3,4}$/.test(outfitClue) && !pin) {
         pin = outfitClue;
         outfitClue = '';
@@ -128,10 +110,8 @@ function setupSheetStructure() {
     existingRange.setValues(updatedRows);
   }
 
-  // Auto-resize columns A..G so Outfit_Clue is clearly visible in Google Sheets
   rosterSheet.autoResizeColumns(1, ROSTER_HEADERS.length);
 
-  // --- TAB 2: Quiz_Participants_Scores ---
   let scoresSheet = ss.getSheetByName(TAB_SCORES);
   if (!scoresSheet) {
     scoresSheet = ss.insertSheet(TAB_SCORES);
@@ -155,7 +135,6 @@ function setupSheetStructure() {
     .setFontColor('#fde68a');
   scoresSheet.setFrozenRows(1);
 
-  // --- TAB 3: Live_Leaderboard_And_Kid_Stats ---
   let dashSheet = ss.getSheetByName(TAB_DASHBOARD);
   if (!dashSheet) {
     dashSheet = ss.insertSheet(TAB_DASHBOARD);
@@ -194,10 +173,14 @@ function setupSheetStructure() {
 }
 
 /**
- * 2. HTTP GET: Returns the ~100-kid Roster (with Outfit_Clue) + Leaderboard as JSON.
+ * 2. HTTP GET: Returns Roster + Leaderboard OR processes GET-encoded write actions
  */
 function doGet(e) {
   try {
+    if (e && e.parameter && e.parameter.action && e.parameter.payload) {
+      return handleWriteAction(e.parameter.action, JSON.parse(e.parameter.payload));
+    }
+
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     if (!ss) {
       return createJsonResponse({
@@ -237,17 +220,30 @@ function doGet(e) {
 }
 
 /**
- * 3. HTTP POST: Handles Participant Score Submissions AND Admin Roster Add/Edit/Delete/Sync.
+ * 3. HTTP POST: Processes POST write actions
  */
 function doPost(e) {
-  const lock = LockService.getScriptLock();
   try {
-    lock.waitLock(15000);
-
     const rawBody = e && e.postData && e.postData.contents ? e.postData.contents : '{}';
     const body = JSON.parse(rawBody);
     const action = body.action || 'submitScore';
     const p = body.payload || body;
+    return handleWriteAction(action, p);
+  } catch (err) {
+    return createJsonResponse({
+      status: 'error',
+      message: err.toString()
+    });
+  }
+}
+
+/**
+ * Core Write Handler (used by both doPost and doGet fallback)
+ */
+function handleWriteAction(action, p) {
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(15000);
 
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     let rosterSheet = ss.getSheetByName(TAB_ROSTER);
@@ -258,12 +254,8 @@ function doPost(e) {
       scoresSheet = ss.getSheetByName(TAB_SCORES);
     }
 
-    // Ensure Roster_Saints_Kids header row includes Outfit_Clue (Columns A..G)
     rosterSheet.getRange(1, 1, 1, ROSTER_HEADERS.length).setValues([ROSTER_HEADERS]);
 
-    // ====================================================================
-    // ACTION A: ADD OR EDIT A KID & SAINT ROW IN GOOGLE SHEET
-    // ====================================================================
     if (action === 'saveKidRow') {
       const bibNum = Math.max(1, Math.min(500, Math.floor(Number(p.Bib_Number || 1))));
       const kidRowValues = [
@@ -291,7 +283,6 @@ function doPost(e) {
         rosterSheet.appendRow(kidRowValues);
       }
 
-      // Sort Roster by Bib_Number ascending
       if (rosterSheet.getLastRow() > 2) {
         rosterSheet.getRange(2, 1, rosterSheet.getLastRow() - 1, ROSTER_HEADERS.length).sort({ column: 1, ascending: true });
       }
@@ -300,14 +291,10 @@ function doPost(e) {
       return createJsonResponse({
         status: 'success',
         action: 'saveKidRow',
-        bibNumber: bibNum,
-        roster: readSheetAsObjects(rosterSheet)
+        bibNumber: bibNum
       });
     }
 
-    // ====================================================================
-    // ACTION B: DELETE A KID & SAINT ROW FROM GOOGLE SHEET
-    // ====================================================================
     if (action === 'deleteKidRow') {
       const bibToDelete = Number(p.Bib_Number || 0);
       const data = rosterSheet.getDataRange().getValues();
@@ -323,14 +310,10 @@ function doPost(e) {
         status: 'success',
         action: 'deleteKidRow',
         deleted: deleted,
-        bibNumber: bibToDelete,
-        roster: readSheetAsObjects(rosterSheet)
+        bibNumber: bibToDelete
       });
     }
 
-    // ====================================================================
-    // ACTION C: BULK SYNC FULL ROSTER TO GOOGLE SHEET
-    // ====================================================================
     if (action === 'syncFullRoster' && Array.isArray(p.roster)) {
       const rows = p.roster.map(function(item, idx) {
         return [
@@ -359,9 +342,7 @@ function doPost(e) {
       });
     }
 
-    // ====================================================================
-    // ACTION D: PARTICIPANT SCORE SUBMISSION (DEFAULT)
-    // ====================================================================
+    // Default: submitScore
     const submissionId = sanitizeCellForSheet(p.Submission_ID || ('SUB-' + new Date().getTime()), 50);
     const cleanName = sanitizeCellForSheet(p.Participant_Name || '', 60);
     const normCandidateName = normalizeParticipantName(cleanName);

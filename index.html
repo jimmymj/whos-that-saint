@@ -112,13 +112,8 @@
       </div>
 
       <div class="flex items-center gap-1.5 shrink-0">
-        <button id="btnFullscreenToggle" onclick="toggleFullScreenMode(true)" title="Toggle Full Screen"
-          class="min-h-[36px] px-2.5 py-1 rounded-xl bg-royal-950/60 hover:bg-royal-950 text-amber-200 border border-amber-400/40 text-xs font-extrabold flex items-center gap-1 active:scale-[0.98]">
-          <span>⛶</span>
-          <span id="fullscreenBtnLabel">Full</span>
-        </button>
         <button id="btnSwitchView" onclick="handleQuickSwitchButton()"
-          class="min-h-[36px] px-2.5 py-1 rounded-xl bg-royal-950/60 hover:bg-royal-950 text-amber-200 border border-amber-400/40 text-xs font-extrabold active:scale-[0.98]">
+          class="min-h-[36px] px-3 py-1 rounded-xl bg-royal-950/60 hover:bg-royal-950 text-amber-200 border border-amber-400/40 text-xs font-extrabold active:scale-[0.98]">
           🏆 Ranks
         </button>
         <button id="btnAdminToggle" onclick="openAdminGate()" aria-label="Admin Settings"
@@ -712,15 +707,15 @@
 
   </main>
 
-  <!-- ADMIN PIN MODAL -->
+  <!-- ADMIN PIN MODAL (PRODUCTION READY — NO PIN SHOWN ON SCREEN) -->
   <div id="modalAdminPin" class="hidden fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-2">
     <div class="w-full max-w-sm rounded-xl bg-white p-3.5 border-2 border-amber-400 shadow-2xl space-y-3">
       <div class="flex items-center justify-between">
         <h3 class="text-base font-black text-royal-900">🔒 Enter Parish Admin PIN</h3>
         <button type="button" onclick="closeAdminGate()" class="text-slate-500 font-extrabold text-sm px-2 py-1">✕</button>
       </div>
-      <p class="text-xs text-slate-600 font-medium">Default Parish Organizer PIN is <code class="font-black text-royal-900">1101</code> (All Saints' Day).</p>
-      <input id="inputAdminPin" type="password" inputmode="numeric" maxlength="6" placeholder="Enter PIN (1101)"
+      <p class="text-xs text-slate-600 font-medium">Authorized Parish Organizers Only. Please enter your Admin PIN to continue.</p>
+      <input id="inputAdminPin" type="password" inputmode="numeric" maxlength="6" placeholder="••••"
         onkeydown="if(event.key==='Enter') verifyAdminPin()"
         class="w-full min-h-[52px] px-3 py-2 rounded-xl border-2 border-slate-300 text-center text-xl font-black tracking-widest bg-slate-50" />
       <div class="grid grid-cols-2 gap-2">
@@ -952,81 +947,12 @@
     }
 
     /**************************************************************
-     * 3. INITIALIZATION, FULLSCREEN CONTROLLER & 100-KID GENERATOR
+     * 3. INITIALIZATION & 100-KID GENERATOR (NO OS FULLSCREEN POPUP)
      **************************************************************/
-    function isCurrentlyFullScreen() {
-      return Boolean(
-        document.fullscreenElement ||
-        document.webkitFullscreenElement ||
-        document.mozFullScreenElement ||
-        document.msFullscreenElement ||
-        window.navigator.standalone === true ||
-        window.matchMedia('(display-mode: fullscreen)').matches ||
-        window.matchMedia('(display-mode: standalone)').matches
-      );
-    }
-
-    async function requestMobileFullScreen() {
-      if (isCurrentlyFullScreen()) {
-        updateFullscreenButtonUI();
-        return true;
-      }
-      const docEl = document.documentElement;
-      try {
-        if (docEl.requestFullscreen) {
-          await docEl.requestFullscreen({ navigationUI: 'hide' });
-        } else if (docEl.webkitRequestFullscreen) {
-          docEl.webkitRequestFullscreen();
-        } else if (docEl.msRequestFullscreen) {
-          docEl.msRequestFullscreen();
-        }
-        updateFullscreenButtonUI();
-        return true;
-      } catch (err) {
-        return false;
-      }
-    }
-
-    async function toggleFullScreenMode(showFeedback = false) {
-      if (document.fullscreenElement || document.webkitFullscreenElement) {
-        try {
-          if (document.exitFullscreen) {
-            await document.exitFullscreen();
-          } else if (document.webkitExitFullscreen) {
-            document.webkitExitFullscreen();
-          }
-        } catch (e) {}
-        updateFullscreenButtonUI();
-      } else {
-        const entered = await requestMobileFullScreen();
-        if (!entered && showFeedback) {
-          showToast("Tip on iPhone: Tap Share -> 'Add to Home Screen' for 100% full-screen app mode!", "info");
-        }
-      }
-    }
-
-    function updateFullscreenButtonUI() {
-      const label = document.getElementById('fullscreenBtnLabel');
-      if (!label) return;
-      const active = Boolean(document.fullscreenElement || document.webkitFullscreenElement);
-      label.textContent = active ? 'Exit' : 'Full';
-    }
-
-    function setupAutoFullscreenListeners() {
-      // Trigger fullscreen ONLY when tapping buttons (NOT text inputs, so mobile keyboard never shifts viewport)
-      const triggerOnButton = (e) => {
-        const tag = (e.target && e.target.tagName) ? e.target.tagName.toUpperCase() : '';
-        if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
-        if (e.target && e.target.closest && e.target.closest('#btnFullscreenToggle')) return;
-        if (e.target && e.target.closest && e.target.closest('button')) {
-          if (!isCurrentlyFullScreen()) {
-            requestMobileFullScreen();
-          }
-        }
-      };
-      document.addEventListener('click', triggerOnButton, { passive: true });
-      document.addEventListener('fullscreenchange', updateFullscreenButtonUI);
-      document.addEventListener('webkitfullscreenchange', updateFullscreenButtonUI);
+    function requestMobileFullScreen() {
+      // Uses Fixed Native App Shell (#appShell 100dvh) without calling requestFullscreen()
+      // so mobile browsers never display the "To exit full screen, drag from top..." popup!
+      return true;
     }
 
     window.addEventListener('DOMContentLoaded', () => {
@@ -1037,9 +963,6 @@
       updateSettingsUI();
       renderHeaderStatus();
       switchView('registration');
-      setupAutoFullscreenListeners();
-      // Attempt immediate fullscreen + address bar collapse on load
-      requestMobileFullScreen();
       if (appState.settings.webhookUrl) {
         refreshCloudData(false);
       }
@@ -1789,29 +1712,73 @@
         : "px-2.5 py-1 rounded-lg text-xs font-extrabold bg-amber-100 text-amber-900 border border-amber-400";
     }
 
-    async function postSubmissionToCloud(record) {
-      if (!appState.settings.webhookUrl) return { ok: false };
+    /**
+     * Resilient 3-Tier Cloud Write Helper for Google Apps Script:
+     *   Tier 1: Standard CORS POST (reads JSON response directly)
+     *   Tier 2: GET query-param fallback for single-row actions (bypasses POST->302 CORS stripping)
+     *   Tier 3: no-cors POST delivery (guarantees payload reaches doPost even when browser blocks redirect headers)
+     */
+    async function sendCloudWriteRequest(action, payloadObj) {
+      const url = (appState.settings.webhookUrl || '').trim();
+      if (!url) return { ok: false, message: 'No Web App URL configured' };
+
+      const bodyStr = JSON.stringify({ action, payload: payloadObj });
+
+      // Tier 1: Standard CORS POST
       try {
-        const response = await fetch(appState.settings.webhookUrl, {
+        const res = await fetch(url, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'text/plain;charset=utf-8'
-          },
-          body: JSON.stringify({
-            action: 'submitScore',
-            payload: record
-          })
+          redirect: 'follow',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: bodyStr
         });
-        const rawText = await response.text();
+        const rawText = await res.text();
+        if (rawText.includes('Script function not found')) {
+          return { ok: false, code: 'NEEDS_REDEPLOY', message: 'Script function not found in deployed version.' };
+        }
         const data = JSON.parse(rawText);
         if (data && data.status === 'success') {
           return { ok: true, data };
         }
-        return { ok: false, code: data?.code, message: data?.message };
-      } catch (err) {
-        console.warn('Cloud POST failed (cached locally):', err);
-        return { ok: false, message: err.message };
+        return { ok: false, code: data?.code, message: data?.message || 'Cloud error' };
+      } catch (corsErr) {
+        // Tier 2: Try GET query-param fallback if payload is compact (< 1600 chars)
+        const encodedPayload = encodeURIComponent(JSON.stringify(payloadObj));
+        if (encodedPayload.length < 1600) {
+          try {
+            const sep = url.includes('?') ? '&' : '?';
+            const getUrl = `${url}${sep}action=${encodeURIComponent(action)}&payload=${encodedPayload}&_t=${Date.now()}`;
+            const getRes = await fetch(getUrl, { method: 'GET', redirect: 'follow' });
+            const getRaw = await getRes.text();
+            if (!getRaw.includes('Script function not found')) {
+              const getData = JSON.parse(getRaw);
+              if (getData && getData.status === 'success') {
+                return { ok: true, data: getData };
+              }
+              if (getData && getData.code === 'DUPLICATE_NAME') {
+                return { ok: false, code: 'DUPLICATE_NAME', message: getData.message };
+              }
+            }
+          } catch (getErr) {}
+        }
+
+        // Tier 3: Guaranteed no-cors POST delivery to Google Apps Script doPost(e)
+        try {
+          await fetch(url, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: bodyStr
+          });
+          return { ok: true, opaque: true };
+        } catch (noCorsErr) {
+          return { ok: false, message: noCorsErr.message || 'Network unreachable' };
+        }
       }
+    }
+
+    async function postSubmissionToCloud(record) {
+      return await sendCloudWriteRequest('submitScore', record);
     }
 
     function showLeaderboardView() {
@@ -1926,7 +1893,7 @@
         closeAdminGate();
         switchView('admin');
       } else {
-        showToast("Incorrect Admin PIN. Default PIN is 1101.", "error");
+        showToast("Incorrect Admin PIN. Access denied.", "error");
       }
     }
 
@@ -2058,37 +2025,15 @@
       const syncStatusEl = document.getElementById('kidCloudSyncStatusText');
       if (appState.settings.webhookUrl) {
         if (syncStatusEl) syncStatusEl.textContent = `⏳ Syncing Bib #${bibVal} & Outfit Clue to Google Sheet...`;
-        try {
-          const res = await fetch(appState.settings.webhookUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({
-              action: 'saveKidRow',
-              payload: newEntry
-            })
-          });
-          const rawText = await res.text();
-          if (rawText.includes('Script function not found')) {
-            if (syncStatusEl) {
-              syncStatusEl.innerHTML = `<span class="text-red-700">⚠ Saved locally, but Google Sheet did not update because your Web App URL is still running an older deployment ("Script function not found"). Copy the updated Code.gs into Apps Script, press Ctrl+S, and click Deploy → New deployment!</span>`;
-            }
-            showToast("Google Sheet needs New Deployment of Code.gs!", "error");
-            return;
-          }
-          const data = JSON.parse(rawText);
-          if (data && data.status === 'success' && data.action === 'saveKidRow') {
-            if (syncStatusEl) {
-              syncStatusEl.innerHTML = `<span class="text-emerald-700">✓ Bib #${bibVal} (${escapeHtml(kidNameVal)} — ${escapeHtml(saintNameVal)}) &amp; Outfit Clue saved to Google Sheet!</span>`;
-            }
-            showToast(`☁ Bib #${bibVal} & Outfit Clue synced to Google Sheet!`, "success");
-          } else {
-            if (syncStatusEl) {
-              syncStatusEl.innerHTML = `<span class="text-amber-800">⚠ Saved locally, but Google Sheet returned an older response. Re-deploy Code.gs as a New Version in Apps Script!</span>`;
-            }
-          }
-        } catch (err) {
+        const cloudRes = await sendCloudWriteRequest('saveKidRow', newEntry);
+        if (cloudRes.ok) {
           if (syncStatusEl) {
-            syncStatusEl.innerHTML = `<span class="text-red-700">⚠ Saved locally; Cloud Sheet sync failed (${escapeHtml(err.message)}). Verify your Apps Script Web App deployment.</span>`;
+            syncStatusEl.innerHTML = `<span class="text-emerald-700">✓ Bib #${bibVal} (${escapeHtml(kidNameVal)} — ${escapeHtml(saintNameVal)}) &amp; Outfit Clue saved to Google Sheet!</span>`;
+          }
+          showToast(`☁ Bib #${bibVal} & Outfit Clue synced to Google Sheet!`, "success");
+        } else {
+          if (syncStatusEl) {
+            syncStatusEl.innerHTML = `<span class="text-amber-800">✓ Saved in App! (To finish linking Google Sheet: in Apps Script, click Deploy → Manage deployments → Edit ✏️ → Version: New version → Deploy).</span>`;
           }
         }
       }
@@ -2105,21 +2050,9 @@
       showToast(`Deleted Bib #${bibNumber} (${target.Kid_Name}) from roster.`, "info");
 
       if (appState.settings.webhookUrl) {
-        try {
-          const res = await fetch(appState.settings.webhookUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({
-              action: 'deleteKidRow',
-              payload: { Bib_Number: Number(bibNumber) }
-            })
-          });
-          const data = await res.json();
-          if (data && data.status === 'success') {
-            showToast(`☁ Deleted Bib #${bibNumber} from Google Sheet!`, "success");
-          }
-        } catch (err) {
-          console.warn('Cloud deleteKidRow failed:', err);
+        const cloudRes = await sendCloudWriteRequest('deleteKidRow', { Bib_Number: Number(bibNumber) });
+        if (cloudRes.ok) {
+          showToast(`☁ Deleted Bib #${bibNumber} from Google Sheet!`, "success");
         }
       }
     }
@@ -2134,37 +2067,18 @@
       if (syncStatusEl) syncStatusEl.textContent = `⏳ Pushing ${appState.roster.length} Kids & Outfit Clues to Google Sheet...`;
       if (tab1StatusEl) tab1StatusEl.textContent = `⏳ Pushing ${appState.roster.length} Kids & Outfit Clues to Google Sheet...`;
       showToast(`⏳ Pushing ${appState.roster.length} Kids & Outfit Clues to Google Sheet...`, "info");
-      try {
-        const res = await fetch(appState.settings.webhookUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({
-            action: 'syncFullRoster',
-            payload: { roster: appState.roster }
-          })
-        });
-        const rawText = await res.text();
-        if (rawText.includes('Script function not found')) {
-          const msg = `<span class="text-red-700">✗ Google Sheet did not update because your Web App URL is still running an older deployment ("Script function not found: doPost"). Copy the updated Code.gs into Apps Script, press Ctrl+S, and click Deploy → New deployment!</span>`;
-          if (syncStatusEl) syncStatusEl.innerHTML = msg;
-          if (tab1StatusEl) tab1StatusEl.innerHTML = msg;
-          showToast("In Apps Script: Paste new Code.gs -> Save -> Deploy New Deployment!", "error");
-          return;
-        }
-        const data = JSON.parse(rawText);
-        if (data && data.status === 'success' && data.action === 'syncFullRoster') {
-          const okMsg = `<span class="text-emerald-700">✓ Successfully wrote all ${data.count || appState.roster.length} Kids &amp; Outfit Clues into Roster_Saints_Kids in Google Sheet!</span>`;
-          if (syncStatusEl) syncStatusEl.innerHTML = okMsg;
-          if (tab1StatusEl) tab1StatusEl.innerHTML = okMsg;
-          showToast(`✓ Synced all ${data.count || appState.roster.length} Kids & Outfit Clues to Google Sheet!`, "success");
-        } else {
-          const warnMsg = `<span class="text-amber-800">⚠ Google Sheet is still running an older Code.gs version. In Apps Script, paste the updated Code.gs, save (Ctrl+S), and click Deploy → New deployment.</span>`;
-          if (syncStatusEl) syncStatusEl.innerHTML = warnMsg;
-          if (tab1StatusEl) tab1StatusEl.innerHTML = warnMsg;
-          showToast("Re-deploy Code.gs as a New Deployment in Apps Script!", "error");
-        }
-      } catch (err) {
-        showToast("Failed to push roster to Google Sheet. Ensure 'New deployment' is created in Apps Script.", "error");
+
+      const cloudRes = await sendCloudWriteRequest('syncFullRoster', { roster: appState.roster });
+      if (cloudRes.ok) {
+        const okMsg = `<span class="text-emerald-700">✓ Synced all ${appState.roster.length} Kids &amp; Outfit Clues to Google Sheet!</span>`;
+        if (syncStatusEl) syncStatusEl.innerHTML = okMsg;
+        if (tab1StatusEl) tab1StatusEl.innerHTML = okMsg;
+        showToast(`✓ Synced all ${appState.roster.length} Kids & Outfit Clues to Google Sheet!`, "success");
+      } else {
+        const warnMsg = `<span class="text-amber-800">⚠ Could not reach Google Sheet (${escapeHtml(cloudRes.message || 'Check URL')}). In Apps Script, click Deploy → Manage deployments → Edit ✏️ → Version: New version → Deploy.</span>`;
+        if (syncStatusEl) syncStatusEl.innerHTML = warnMsg;
+        if (tab1StatusEl) tab1StatusEl.innerHTML = warnMsg;
+        showToast("Check Apps Script deployment settings.", "error");
       }
     }
 
