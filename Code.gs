@@ -303,7 +303,7 @@ function doPost(e) {
 }
 
 /**
- * Core Write Handler (used by both doPost and doGet fallback)
+ * Core Write Handler (Optimized for High Concurrency & Parallel Submissions)
  */
 function handleWriteAction(action, p) {
   if (action === 'ping') {
@@ -314,9 +314,54 @@ function handleWriteAction(action, p) {
     });
   }
 
+  // Pre-process and sanitize payload OUTSIDE the lock to minimize lock hold duration
+  const submissionId = sanitizeCellForSheet(p.Submission_ID || ('SUB-' + new Date().getTime()), 50);
+  const cleanName = sanitizeCellForSheet(p.Participant_Name || '', 60);
+  const normCandidateName = normalizeParticipantName(cleanName);
+
+  if (action === 'submitScore' && (!normCandidateName || normCandidateName.length < 2)) {
+    return createJsonResponse({
+      status: 'error',
+      code: 'INVALID_NAME',
+      message: 'Participant_Name must be at least 2 characters.'
+    });
+  }
+
+  const totalAttempted = Math.min(100, Math.max(1, Math.floor(Number(p.Total_Attempted || 1))));
+  const maxPossiblePoints = totalAttempted * 10;
+  const pointsScore = Math.min(maxPossiblePoints, Math.max(0, Math.floor(Number(p.Correct_Score || 0))));
+  const accuracyPct = Math.min(100, Math.max(0, Number(Number(p.Accuracy_Percent || 0).toFixed(1))));
+  const timeTakenSec = Math.min(86400, Math.max(1, Math.floor(Number(p.Time_Taken_Sec || 1))));
+
+  const validBibs = String(p.Matched_Bib_IDs || '')
+    .split(',')
+    .map(function(s) { return parseInt(s.trim(), 10); })
+    .filter(function(n) { return !isNaN(n) && n >= 1 && n <= 500; });
+
+  const rowToAppend = [
+    submissionId,
+    sanitizeCellForSheet(p.Timestamp || Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss'), 30),
+    cleanName,
+    sanitizeCellForSheet(p.Family_or_Phone || '', 60),
+    sanitizeCellForSheet(p.Game_Mode || 'Find Saint by Kid Name', 40),
+    pointsScore,
+    totalAttempted,
+    accuracyPct,
+    timeTakenSec,
+    validBibs.join(',')
+  ];
+
+  // Up to 30-second queue wait for high-concurrency bursts (e.g. 100+ simultaneous submissions)
   const lock = LockService.getScriptLock();
   try {
-    lock.waitLock(10000);
+    const gotLock = lock.tryLock(30000);
+    if (!gotLock) {
+      return createJsonResponse({
+        status: 'busy',
+        code: 'SERVER_BUSY',
+        message: 'High simultaneous submission traffic. Automatic retry scheduled.'
+      });
+    }
 
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     if (!ss) {
@@ -337,7 +382,7 @@ function handleWriteAction(action, p) {
     // ACTION: SAVE APP CONFIG (Enable/Disable Saint Find Options)
     if (action === 'saveAppConfig') {
       const savedCfg = writeAppConfigToSheet(ss, p);
-      SpreadsheetApp.flush();
+      lock.releaseLock(); // Release lock immediately
       return createJsonResponse({
         status: 'success',
         action: 'saveAppConfig',
@@ -350,14 +395,12 @@ function handleWriteAction(action, p) {
       if (scoresSheet.getLastRow() > 1) {
         scoresSheet.getRange(2, 1, scoresSheet.getLastRow() - 1, 10).clearContent();
       }
-      SpreadsheetApp.flush();
+      lock.releaseLock(); // Release lock immediately
       return createJsonResponse({
         status: 'success',
         action: 'clearAllScores'
       });
     }
-
-    rosterSheet.getRange(1, 1, 1, ROSTER_HEADERS.length).setValues([ROSTER_HEADERS]);
 
     if (action === 'saveKidRow') {
       const bibNum = Math.max(1, Math.min(500, Math.floor(Number(p.Bib_Number || 1))));
@@ -389,7 +432,7 @@ function handleWriteAction(action, p) {
       if (rosterSheet.getLastRow() > 2) {
         rosterSheet.getRange(2, 1, rosterSheet.getLastRow() - 1, ROSTER_HEADERS.length).sort({ column: 1, ascending: true });
       }
-      SpreadsheetApp.flush();
+      lock.releaseLock();
 
       return createJsonResponse({
         status: 'success',
@@ -408,7 +451,7 @@ function handleWriteAction(action, p) {
           deleted = true;
         }
       }
-      SpreadsheetApp.flush();
+      lock.releaseLock();
       return createJsonResponse({
         status: 'success',
         action: 'deleteKidRow',
@@ -436,7 +479,7 @@ function handleWriteAction(action, p) {
       if (rows.length > 0) {
         rosterSheet.getRange(2, 1, rows.length, ROSTER_HEADERS.length).setValues(rows);
       }
-      SpreadsheetApp.flush();
+      lock.releaseLock();
 
       return createJsonResponse({
         status: 'success',
@@ -445,83 +488,49 @@ function handleWriteAction(action, p) {
       });
     }
 
-    // Default: submitScore (Optimized single-pass validation and rank calculation)
-    const submissionId = sanitizeCellForSheet(p.Submission_ID || ('SUB-' + new Date().getTime()), 50);
-    const cleanName = sanitizeCellForSheet(p.Participant_Name || '', 60);
-    const normCandidateName = normalizeParticipantName(cleanName);
-
-    if (!normCandidateName || normCandidateName.length < 2) {
-      return createJsonResponse({
-        status: 'error',
-        code: 'INVALID_NAME',
-        message: 'Participant_Name must be at least 2 characters.'
-      });
-    }
-
-    const totalAttempted = Math.min(100, Math.max(1, Math.floor(Number(p.Total_Attempted || 1))));
-    const maxPossiblePoints = totalAttempted * 10;
-    const pointsScore = Math.min(maxPossiblePoints, Math.max(0, Math.floor(Number(p.Correct_Score || 0))));
-    const accuracyPct = Math.min(100, Math.max(0, Number(Number(p.Accuracy_Percent || 0).toFixed(1))));
-    const timeTakenSec = Math.min(86400, Math.max(1, Math.floor(Number(p.Time_Taken_Sec || 1))));
-
-    const existingData = scoresSheet.getDataRange().getValues();
-    let calculatedRank = 1;
-
-    for (let i = 1; i < existingData.length; i++) {
-      if (String(existingData[i][0]) === submissionId) {
-        return createJsonResponse({
-          status: 'success',
-          duplicate: true,
-          rank: calculateParticipantRank(existingData, pointsScore, timeTakenSec)
-        });
-      }
-      if (normalizeParticipantName(existingData[i][2]) === normCandidateName) {
-        return createJsonResponse({
-          status: 'error',
-          code: 'DUPLICATE_NAME',
-          message: 'Participant name is already registered. Duplicate names are not allowed.'
-        });
-      }
-      const rowScore = Number(existingData[i][5] || 0);
-      const rowTime = Number(existingData[i][8] || 999999);
-      if (rowScore > pointsScore || (rowScore === pointsScore && rowTime < timeTakenSec)) {
-        calculatedRank++;
+    // Default: submitScore
+    // Ultra-fast critical section: Read only Columns A to C (Submission_ID, Timestamp, Participant_Name)
+    const lastRow = scoresSheet.getLastRow();
+    if (lastRow > 1) {
+      const idAndNames = scoresSheet.getRange(2, 1, lastRow - 1, 3).getValues();
+      for (let i = 0; i < idAndNames.length; i++) {
+        if (String(idAndNames[i][0]) === submissionId) {
+          lock.releaseLock();
+          return createJsonResponse({
+            status: 'success',
+            duplicate: true,
+            submissionId: submissionId
+          });
+        }
+        if (normalizeParticipantName(idAndNames[i][2]) === normCandidateName) {
+          lock.releaseLock();
+          return createJsonResponse({
+            status: 'error',
+            code: 'DUPLICATE_NAME',
+            message: 'Participant name is already registered. Duplicate names are not allowed.'
+          });
+        }
       }
     }
 
-    const validBibs = String(p.Matched_Bib_IDs || '')
-      .split(',')
-      .map(function(s) { return parseInt(s.trim(), 10); })
-      .filter(function(n) { return !isNaN(n) && n >= 1 && n <= 500; });
-
-    const rowToAppend = [
-      submissionId,
-      sanitizeCellForSheet(p.Timestamp || Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss'), 30),
-      cleanName,
-      sanitizeCellForSheet(p.Family_or_Phone || '', 60),
-      sanitizeCellForSheet(p.Game_Mode || 'Find Saint by Kid Name', 40),
-      pointsScore,
-      totalAttempted,
-      accuracyPct,
-      timeTakenSec,
-      validBibs.join(',')
-    ];
-
+    // Append row atomically
     scoresSheet.appendRow(rowToAppend);
-    SpreadsheetApp.flush();
+
+    // Release lock IMMEDIATELY so parallel users waiting in queue acquire lock instantly (<40ms hold time)
+    lock.releaseLock();
 
     return createJsonResponse({
       status: 'success',
       submissionId: submissionId,
-      rank: calculatedRank
+      correctScore: pointsScore,
+      timeTaken: timeTakenSec
     });
   } catch (err) {
+    try { lock.releaseLock(); } catch (e) {}
     return createJsonResponse({
       status: 'error',
       message: err.toString()
     });
-  } finally {
-    lock.releaseLock();
   }
 }
 

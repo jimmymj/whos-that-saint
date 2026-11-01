@@ -2298,25 +2298,57 @@
 
       switchView('results');
 
-      // 3. Asynchronous POST to Cloud Sheet if configured
+      // 3. Resilient High-Concurrency Cloud Sync (Immediate + Jittered Exponential Retry)
       if (getActiveCloudUrl()) {
-        updatePersonalSyncBadge('Syncing to Cloud Sheet...', false);
+        syncSubmissionWithJitteredRetry(record);
+      }
+    }
+
+    async function syncSubmissionWithJitteredRetry(record, maxRetries = 4) {
+      if (!getActiveCloudUrl()) return false;
+
+      let attempt = 0;
+      while (attempt < maxRetries) {
+        attempt++;
+        if (attempt > 1) {
+          updatePersonalSyncBadge(`Sync in progress (Attempt ${attempt}/${maxRetries})...`, false);
+        } else {
+          updatePersonalSyncBadge('Syncing to Cloud Sheet...', false);
+        }
+
         const result = await postSubmissionToCloud(record);
+
         if (result.ok) {
           record.Sync_Status = 'Synced to Cloud';
           saveSubmissionsToStorage();
           updatePersonalSyncBadge('✓ Saved to Cloud Sheet', true);
           renderLeaderboardAndAppreciation();
-        } else if (result.code === 'DUPLICATE_NAME') {
+          return true;
+        }
+
+        if (result.code === 'DUPLICATE_NAME') {
           updatePersonalSyncBadge('⚠ Duplicate Name Rejected by Cloud', false);
           showToast("Cloud Sheet rejected duplicate participant name!", "error");
-        } else if (result.code === 'NEEDS_REDEPLOY') {
+          return false;
+        }
+
+        if (result.code === 'NEEDS_REDEPLOY') {
           updatePersonalSyncBadge('Saved Locally (Cloud Deploy Needed)', false);
           showToast("Apps Script Web App requires New Version deployment!", "error");
-        } else {
-          updatePersonalSyncBadge('Saved Locally - Pending Sync', false);
+          return false;
+        }
+
+        // Parallel lock contention / network jitter: wait and retry
+        if (attempt < maxRetries) {
+          const jitter = Math.floor(Math.random() * 800);
+          const delay = (attempt * 1200) + jitter;
+          updatePersonalSyncBadge(`Queue busy; retrying in ${(delay / 1000).toFixed(1)}s...`, false);
+          await new Promise(res => setTimeout(res, delay));
         }
       }
+
+      updatePersonalSyncBadge('Saved Locally - Pending Sync', false);
+      return false;
     }
 
     function updatePersonalSyncBadge(text, isCloudSuccess) {
@@ -2988,6 +3020,7 @@
           sub.Sync_Status = 'Synced to Cloud';
           syncedCount += 1;
         }
+        await new Promise(r => setTimeout(r, 250));
       }
       saveSubmissionsToStorage();
       renderAdminScoresTable();
