@@ -791,7 +791,7 @@
      * 1. STORAGE KEYS & APPLICATION STATE (GOOGLE SHEET ONLY — NO SAMPLE DATA)
      **************************************************************/
     const STORAGE_KEYS = {
-      SETTINGS: 'whos_that_saint_settings_v3',
+      SETTINGS: 'whos_that_saint_settings_v5',
       ROSTER: 'whos_that_saint_roster_v4',
       SUBMISSIONS: 'whos_that_saint_submissions_v4'
     };
@@ -1227,10 +1227,14 @@
     const CLUE_PENALTY_POINTS = 2;
 
     // Encoded Default Cloud Endpoint (Never exposed in plain text on screen)
-    const DEFAULT_CLOUD_KEY_B64 = 'aHR0cHM6Ly9zY3JpcHQuZ29vZ2xlLmNvbS9tYWNyb3Mvcy9BS2Z5Y2J5NzFVVXYySDZpM0dFUzJfZE1LMHozcmZPc01TMW5hTkdJUUt2SE1wQnZxb2hlLWdtcVR3M0t5ZzNIaUZnMG1Ka1NtQS9leGVj';
+    const DEFAULT_CLOUD_KEY_B64 = 'aHR0cHM6Ly9zY3JpcHQuZ29vZ2xlLmNvbS9tYWNyb3Mvcy9BS2Z5Y2J6RkF4dEJoLXd5SWxMbzdoQ1dOMWhXWUl0Q3dTWmFZX0NnSm1DcGZudFhuT19rWThUNmc5ZFRlczZlc0ZoZHRtXy1iQS9leGVj';
 
     function getActiveCloudUrl() {
-      const raw = (appState.settings.webhookUrl || '').trim();
+      let raw = (appState.settings.webhookUrl || '').trim();
+      if (raw.includes('AKfycby71UUv2H6i3GES2') || raw.includes('0mJkSmA')) {
+        raw = '';
+        appState.settings.webhookUrl = '';
+      }
       if (raw) return raw;
       try {
         return atob(DEFAULT_CLOUD_KEY_B64);
@@ -1419,6 +1423,8 @@
         localStorage.removeItem('whos_that_saint_roster');
         localStorage.removeItem('whos_that_saint_submissions');
         localStorage.removeItem('whos_that_saint_settings_v2');
+        localStorage.removeItem('whos_that_saint_settings_v3');
+        localStorage.removeItem('whos_that_saint_settings_v4');
 
         const savedSettings = localStorage.getItem(STORAGE_KEYS.SETTINGS);
         if (savedSettings) {
