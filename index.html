@@ -924,19 +924,15 @@
     }
 
     function setupAutoFullscreenListeners() {
-      // Attempt immediately when opened
-      requestMobileFullScreen();
-
-      // Also trigger automatically on first user tap/interaction on the page
+      // Trigger automatically on first user tap/interaction on the page
       const autoTrigger = (e) => {
         const tag = (e.target && e.target.tagName) ? e.target.tagName.toUpperCase() : '';
-        if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+        if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || tag === 'BUTTON') return;
         if (!isCurrentlyFullScreen()) {
           requestMobileFullScreen();
         }
       };
-      document.addEventListener('click', autoTrigger, { passive: true });
-      document.addEventListener('touchstart', autoTrigger, { passive: true });
+      document.addEventListener('pointerdown', autoTrigger, { passive: true, once: true });
     }
 
     function openShareQrModal() {
@@ -2454,6 +2450,9 @@
         }
       } catch (err) {
         if (notify) showToast("Offline or Cloud unreachable — showing cached data.", "error");
+      } finally {
+        appState.cloudSyncLoading = false;
+        saveRosterToStorage();
       }
     }
 
@@ -2706,12 +2705,6 @@
     }
 
     function escapeHtml(str) {
-      return String(str || '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
-    }
       return String(str || '')
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
