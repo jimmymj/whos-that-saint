@@ -5,13 +5,15 @@
  * Tabs Managed:
  *   1. Roster_Saints_Kids             (Master 100-Kid Input Table + Outfit_Clue)
  *   2. Quiz_Participants_Scores       (Centralized Participant Points Log)
- *   3. Live_Leaderboard_And_Kid_Stats (Automated Summary & Appreciation Dashboard)
+ *   3. Live_Leaderboard_And_Kid_Stats (Automated Summary, Appreciation & App Config)
  *
- * HOW TO ACTIVATE ON YOUR EXISTING WEB APP URL:
- *   1. In your Google Sheet, click Extensions -> Apps Script.
- *   2. Replace ALL code in Code.gs with this entire file and press Ctrl + S (Save).
- *   3. Click "Deploy" (top right) -> "Manage deployments" -> Click the Pencil icon (✏️ Edit)
- *      -> Under "Version", select "New version" -> Click "Deploy".
+ * SUPPORTED ACTIONS:
+ *   - GET                          : Returns Roster + Leaderboard + Live App Config
+ *   - POST/GET action="submitScore"    : Validates & appends unique participant score
+ *   - POST/GET action="saveKidRow"     : Adds or updates Kid + Saint + Outfit_Clue
+ *   - POST/GET action="deleteKidRow"   : Deletes Kid row by Bib_Number
+ *   - POST/GET action="syncFullRoster" : Bulk-syncs full 100-kid roster
+ *   - POST/GET action="saveAppConfig"  : Saves enabled/disabled Saint Find Options in Sheet
  * ============================================================================
  */
 
@@ -58,6 +60,74 @@ function normalizeParticipantName(name) {
     .trim()
     .replace(/\s+/g, ' ')
     .toLowerCase();
+}
+
+/**
+ * Reads App Config (which Saint Find Options are enabled/disabled) from Sheet & ScriptProperties
+ */
+function readAppConfigFromSheet(ss) {
+  const defaultCfg = {
+    option1_KidToSaint: true,
+    option2_SaintToKid: true,
+    requireSecretPin: false
+  };
+  try {
+    const props = PropertiesService.getScriptProperties();
+    const savedJson = props.getProperty('APP_CONFIG_JSON');
+    if (savedJson) {
+      const parsed = JSON.parse(savedJson);
+      defaultCfg.option1_KidToSaint = parsed.option1_KidToSaint !== false;
+      defaultCfg.option2_SaintToKid = parsed.option2_SaintToKid !== false;
+      defaultCfg.requireSecretPin = Boolean(parsed.requireSecretPin);
+    }
+    const dashSheet = ss ? ss.getSheetByName(TAB_DASHBOARD) : null;
+    if (dashSheet) {
+      const cfgValues = dashSheet.getRange('M3:N5').getValues();
+      if (cfgValues[0][0] === 'option1_KidToSaint' && cfgValues[0][1] !== '') {
+        defaultCfg.option1_KidToSaint = String(cfgValues[0][1]).toLowerCase() !== 'false';
+      }
+      if (cfgValues[1][0] === 'option2_SaintToKid' && cfgValues[1][1] !== '') {
+        defaultCfg.option2_SaintToKid = String(cfgValues[1][1]).toLowerCase() !== 'false';
+      }
+      if (cfgValues[2][0] === 'requireSecretPin' && cfgValues[2][1] !== '') {
+        defaultCfg.requireSecretPin = String(cfgValues[2][1]).toLowerCase() === 'true';
+      }
+    }
+  } catch (e) {}
+  // Ensure at least one option is enabled
+  if (!defaultCfg.option1_KidToSaint && !defaultCfg.option2_SaintToKid) {
+    defaultCfg.option1_KidToSaint = true;
+  }
+  return defaultCfg;
+}
+
+/**
+ * Writes App Config to both Live_Leaderboard_And_Kid_Stats (M2:N5) and ScriptProperties
+ */
+function writeAppConfigToSheet(ss, cfg) {
+  const cleanCfg = {
+    option1_KidToSaint: cfg.option1_KidToSaint !== false,
+    option2_SaintToKid: cfg.option2_SaintToKid !== false,
+    requireSecretPin: Boolean(cfg.requireSecretPin)
+  };
+  if (!cleanCfg.option1_KidToSaint && !cleanCfg.option2_SaintToKid) {
+    cleanCfg.option1_KidToSaint = true;
+  }
+  try {
+    PropertiesService.getScriptProperties().setProperty('APP_CONFIG_JSON', JSON.stringify(cleanCfg));
+  } catch (e) {}
+
+  let dashSheet = ss.getSheetByName(TAB_DASHBOARD);
+  if (dashSheet) {
+    dashSheet.getRange('M1').setValue('⚙ APP SETTINGS').setFontWeight('bold');
+    dashSheet.getRange('M2:N2').setValues([['Setting_Key', 'Setting_Value']]).setFontWeight('bold').setBackground('#4a1c11').setFontColor('#fde68a');
+    dashSheet.getRange('M3:N5').setValues([
+      ['option1_KidToSaint', cleanCfg.option1_KidToSaint],
+      ['option2_SaintToKid', cleanCfg.option2_SaintToKid],
+      ['requireSecretPin', cleanCfg.requireSecretPin]
+    ]);
+  }
+  return cleanCfg;
 }
 
 /**
@@ -139,6 +209,7 @@ function setupSheetStructure() {
   if (!dashSheet) {
     dashSheet = ss.insertSheet(TAB_DASHBOARD);
   }
+  const existingCfg = readAppConfigFromSheet(ss);
   dashSheet.clear();
 
   dashSheet.getRange('A1').setValue('🏆 TOP 10 PARTICIPANTS (10 PTS/MATCH, -2 PTS CLUE)').setFontWeight('bold').setFontSize(12);
@@ -169,11 +240,13 @@ function setupSheetStructure() {
   }
   dashSheet.getRange(3, 11, 100, 1).setFormulas(formulas);
 
+  writeAppConfigToSheet(ss, existingCfg);
+
   SpreadsheetApp.flush();
 }
 
 /**
- * 2. HTTP GET: Returns Roster + Leaderboard OR processes GET-encoded write actions
+ * 2. HTTP GET: Returns Roster + Leaderboard + Config OR processes GET-encoded write actions
  */
 function doGet(e) {
   try {
@@ -185,7 +258,7 @@ function doGet(e) {
     if (!ss) {
       return createJsonResponse({
         status: 'error',
-        message: 'Script is not bound to a Google Sheet. Open your Google Sheet -> Extensions -> Apps Script.'
+        message: 'Database not bound.'
       });
     }
     let rosterSheet = ss.getSheetByName(TAB_ROSTER);
@@ -198,6 +271,7 @@ function doGet(e) {
 
     const roster = readSheetAsObjects(rosterSheet);
     const allScores = readSheetAsObjects(scoresSheet);
+    const appConfig = readAppConfigFromSheet(ss);
 
     allScores.sort(function(a, b) {
       const scoreDiff = Number(b.Correct_Score || 0) - Number(a.Correct_Score || 0);
@@ -208,6 +282,7 @@ function doGet(e) {
     return createJsonResponse({
       status: 'success',
       timestamp: new Date().toISOString(),
+      config: appConfig,
       roster: roster,
       leaderboard: allScores.slice(0, 50)
     });
@@ -252,6 +327,17 @@ function handleWriteAction(action, p) {
       setupSheetStructure();
       rosterSheet = ss.getSheetByName(TAB_ROSTER);
       scoresSheet = ss.getSheetByName(TAB_SCORES);
+    }
+
+    // ACTION: SAVE APP CONFIG (Enable/Disable Saint Find Options)
+    if (action === 'saveAppConfig') {
+      const savedCfg = writeAppConfigToSheet(ss, p);
+      SpreadsheetApp.flush();
+      return createJsonResponse({
+        status: 'success',
+        action: 'saveAppConfig',
+        config: savedCfg
+      });
     }
 
     rosterSheet.getRange(1, 1, 1, ROSTER_HEADERS.length).setValues([ROSTER_HEADERS]);

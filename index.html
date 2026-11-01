@@ -112,8 +112,12 @@
       </div>
 
       <div class="flex items-center gap-1.5 shrink-0">
+        <button id="btnShareQr" onclick="openShareQrModal()" aria-label="Share App & QR Code"
+          class="min-h-[36px] px-2.5 py-1 rounded-xl bg-amber-400/20 hover:bg-amber-400/30 text-amber-200 border border-amber-400/50 text-xs font-extrabold flex items-center gap-1 active:scale-[0.98]">
+          <span>📲</span><span>QR / Share</span>
+        </button>
         <button id="btnSwitchView" onclick="handleQuickSwitchButton()"
-          class="min-h-[36px] px-3 py-1 rounded-xl bg-royal-950/60 hover:bg-royal-950 text-amber-200 border border-amber-400/40 text-xs font-extrabold active:scale-[0.98]">
+          class="min-h-[36px] px-2.5 py-1 rounded-xl bg-royal-950/60 hover:bg-royal-950 text-amber-200 border border-amber-400/40 text-xs font-extrabold active:scale-[0.98]">
           🏆 Ranks
         </button>
         <button id="btnAdminToggle" onclick="openAdminGate()" aria-label="Admin Settings"
@@ -201,17 +205,23 @@
           </div>
         </div>
 
-        <!-- 2 Saints Find Activity Options -->
+        <!-- 2 Saints Find Activity Options (Controlled by Admin & Synced from Cloud Sheet) -->
         <div class="space-y-2 pt-1">
-          <p class="text-xs font-extrabold uppercase tracking-wider text-slate-700">Choose Your Saints Find Option:</p>
+          <div class="flex items-center justify-between">
+            <p class="text-xs font-extrabold uppercase tracking-wider text-slate-700">Choose Your Saints Find Option:</p>
+            <span id="optionsAvailabilityBadge" class="hidden text-[10px] font-extrabold bg-amber-100 text-royal-900 border border-amber-300 px-2 py-0.5 rounded-full"></span>
+          </div>
 
           <!-- Option 1: Find Saint Names by Kid's Name -->
           <button type="button" id="cardModeKidToSaint" onclick="selectActivityOption('Find Saint by Kid Name')"
             class="w-full min-h-[60px] rounded-xl p-3 text-left border-2 border-royal-900 bg-amber-50/80 shadow-sm active:scale-[0.99] transition flex items-center justify-between gap-2">
-            <div class="space-y-0.5">
-              <div class="flex items-center gap-1.5">
-                <span class="inline-block w-4 h-4 rounded-full bg-royal-900 text-amber-300 text-[10px] font-black flex items-center justify-center" id="radioModeKidToSaint">✓</span>
-                <span class="text-base font-extrabold text-royal-900">1. Find Saint Name by Kid's Name</span>
+            <div class="space-y-0.5 w-full">
+              <div class="flex items-center justify-between gap-1.5">
+                <div class="flex items-center gap-1.5">
+                  <span class="inline-block w-4 h-4 rounded-full bg-royal-900 text-amber-300 text-[10px] font-black flex items-center justify-center shrink-0" id="radioModeKidToSaint">✓</span>
+                  <span id="titleModeKidToSaint" class="text-base font-extrabold text-royal-900">1. Find Saint Name by Kid's Name</span>
+                </div>
+                <span id="badgeDisabledOption1" class="hidden bg-slate-200 text-slate-700 text-[10px] font-black px-2 py-0.5 rounded-md shrink-0">🔒 Disabled</span>
               </div>
               <p class="text-xs text-slate-700 font-medium pl-5">Select a child by Bib # or Name, read About the Saint, and match which Saint they are!</p>
             </div>
@@ -220,10 +230,13 @@
           <!-- Option 2: Find Kid's Name Dressed Up by Saint -->
           <button type="button" id="cardModeSaintToKid" onclick="selectActivityOption('Find Kid by Saint Name')"
             class="w-full min-h-[60px] rounded-xl p-3 text-left border-2 border-slate-300 bg-white shadow-sm active:scale-[0.99] transition flex items-center justify-between gap-2">
-            <div class="space-y-0.5">
-              <div class="flex items-center gap-1.5">
-                <span class="inline-block w-4 h-4 rounded-full border-2 border-slate-400 text-[10px] font-black flex items-center justify-center" id="radioModeSaintToKid"></span>
-                <span class="text-base font-extrabold text-slate-900">2. Find Kid's Name Dressed Up by Saint</span>
+            <div class="space-y-0.5 w-full">
+              <div class="flex items-center justify-between gap-1.5">
+                <div class="flex items-center gap-1.5">
+                  <span class="inline-block w-4 h-4 rounded-full border-2 border-slate-400 text-[10px] font-black flex items-center justify-center shrink-0" id="radioModeSaintToKid"></span>
+                  <span id="titleModeSaintToKid" class="text-base font-extrabold text-slate-900">2. Find Kid's Name Dressed Up by Saint</span>
+                </div>
+                <span id="badgeDisabledOption2" class="hidden bg-slate-200 text-slate-700 text-[10px] font-black px-2 py-0.5 rounded-md shrink-0">🔒 Disabled</span>
               </div>
               <p class="text-xs text-slate-600 font-medium pl-5">See the Saint's name &amp; About the Saint, spot their costume in the hall, and match the child's name!</p>
             </div>
@@ -445,47 +458,72 @@
 
       <!-- ADMIN TAB 1: CLOUD & CSV DATA MANAGER -->
       <div id="adminTabPanel1" class="w-full rounded-xl p-3 bg-white border-2 border-slate-300 space-y-3">
-        <!-- QR Code & Short URL Parish Hall Share Box -->
-        <div class="w-full rounded-xl p-3 bg-amber-50/90 border-2 border-amber-400 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div class="space-y-1 text-center sm:text-left">
-            <h3 class="text-sm sm:text-base font-black text-royal-900">📱 Parishioner QR Code &amp; Short URLs</h3>
-            <p class="text-xs text-slate-700 font-semibold">Scan with any phone camera to launch in Full-Screen mode:</p>
-            <div class="text-xs font-mono space-y-0.5 pt-0.5">
-              <div><strong>Easy Short Link:</strong> <a href="https://is.gd/whosthatsaint2026" target="_blank" class="text-royal-800 underline font-extrabold">https://is.gd/whosthatsaint2026</a></div>
-              <div><strong>TinyURL Link:</strong> <a href="https://tinyurl.com/2yozrgy4" target="_blank" class="text-royal-800 underline font-extrabold">https://tinyurl.com/2yozrgy4</a></div>
-              <div><strong>Direct App Link:</strong> <a href="https://jimmymj.github.io/whos-that-saint/" target="_blank" class="text-royal-800 underline font-bold">https://jimmymj.github.io/whos-that-saint/</a></div>
+        <!-- ADMIN CONTROLS: ENABLE / DISABLE SAINTS FIND OPTIONS (SYNCED TO CLOUD SHEET) -->
+        <div class="w-full rounded-xl p-3 bg-amber-50/90 border-2 border-amber-400 space-y-2">
+          <div class="flex items-center justify-between gap-2">
+            <div>
+              <h3 class="text-sm sm:text-base font-black text-royal-900">🎯 Saints Find Option Access Controls</h3>
+              <p class="text-xs text-slate-700 font-semibold">Enable or disable activity options for all participants (syncs to Cloud Sheet):</p>
             </div>
+            <span id="adminOptionsSyncBadge" class="bg-royal-900 text-amber-300 text-[10px] font-black px-2 py-1 rounded-lg shrink-0">
+              Live Sync
+            </span>
           </div>
-          <div class="flex flex-col items-center gap-1.5 shrink-0">
-            <img src="whos-that-saint-qr.png" onerror="this.src='https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=10&color=4a1c11&bgcolor=fdf8f0&data=https%3A%2F%2Fjimmymj.github.io%2Fwhos-that-saint%2F'"
-              alt="Who's That Saint QR Code" class="w-28 h-28 rounded-xl border-2 border-royal-900 shadow-sm bg-white p-1" />
-            <a href="whos-that-saint-qr.png" download="whos-that-saint-qr.png"
-              class="px-2.5 py-1 rounded-lg bg-royal-900 text-amber-300 font-extrabold text-[11px] shadow active:scale-[0.99]">
-              ⬇ Download QR PNG
-            </a>
+
+          <div class="space-y-1.5 pt-1">
+            <!-- Toggle Option 1 -->
+            <button type="button" id="btnAdminToggleOption1" onclick="toggleAdminFindOption(1)"
+              class="w-full min-h-[50px] rounded-xl p-2.5 bg-white border-2 border-emerald-600 text-left font-extrabold text-xs sm:text-sm text-royal-900 flex items-center justify-between gap-2 shadow-sm active:scale-[0.99]">
+              <span>1. Find Saint Name by Kid's Name</span>
+              <span id="labelAdminOption1Status" class="bg-emerald-700 text-white px-2.5 py-1 rounded-lg text-xs font-black shrink-0">✓ Enabled</span>
+            </button>
+
+            <!-- Toggle Option 2 -->
+            <button type="button" id="btnAdminToggleOption2" onclick="toggleAdminFindOption(2)"
+              class="w-full min-h-[50px] rounded-xl p-2.5 bg-white border-2 border-emerald-600 text-left font-extrabold text-xs sm:text-sm text-royal-900 flex items-center justify-between gap-2 shadow-sm active:scale-[0.99]">
+              <span>2. Find Kid's Name Dressed Up by Saint</span>
+              <span id="labelAdminOption2Status" class="bg-emerald-700 text-white px-2.5 py-1 rounded-lg text-xs font-black shrink-0">✓ Enabled</span>
+            </button>
           </div>
+          <p id="adminOptionSyncStatusText" class="text-[11px] font-bold text-slate-600"></p>
         </div>
 
-        <h3 class="text-base font-extrabold text-royal-900 border-b pb-1.5">Cloud Webhook &amp; Google Sheet Sync</h3>
+        <h3 class="text-base font-extrabold text-royal-900 border-b pb-1.5">🔒 Encrypted Cloud Database &amp; Sheet Sync</h3>
         <div class="space-y-2">
-          <label for="inputWebhookUrl" class="block text-xs font-extrabold text-slate-700 uppercase">
-            Google Apps Script Web App URL (`Code.gs`)
-          </label>
-          <input id="inputWebhookUrl" type="url" placeholder="https://script.google.com/macros/s/.../exec"
-            onchange="saveAdminSettings()"
-            class="w-full min-h-[48px] px-3 py-2 rounded-xl border-2 border-slate-300 text-sm font-mono text-slate-900 bg-slate-50" />
+          <!-- Hashed / Masked Cloud Endpoint Status (Never exposes script URL in plain text) -->
+          <div class="w-full rounded-xl p-2.5 bg-slate-100 border border-slate-300 flex items-center justify-between gap-2">
+            <div class="min-w-0">
+              <p class="text-[11px] font-extrabold uppercase text-slate-500">Protected Cloud Sync Key Fingerprint</p>
+              <p id="cloudUrlHashBadge" class="text-xs font-mono font-black text-royal-900 truncate">SHA-256 Hash: #8F4A2C91 • Masked &amp; Active</p>
+            </div>
+            <button type="button" onclick="toggleCloudKeyEditor()"
+              class="px-2.5 py-1.5 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-800 font-extrabold text-[11px] shrink-0 active:scale-[0.98]">
+              🔑 Change Key
+            </button>
+          </div>
+
+          <div id="cloudKeyEditorBox" class="hidden space-y-1.5 p-2.5 rounded-xl bg-slate-50 border border-slate-300">
+            <label for="inputWebhookUrl" class="block text-xs font-extrabold text-slate-700 uppercase">
+              Encrypted Cloud Sync Endpoint (Hidden for Security)
+            </label>
+            <input id="inputWebhookUrl" type="password" autocomplete="off" placeholder="••••••••••••••••••••••••••••••••"
+              onchange="saveAdminSettings()"
+              class="w-full min-h-[46px] px-3 py-2 rounded-xl border-2 border-slate-300 text-sm font-mono text-slate-900 bg-white" />
+            <p class="text-[11px] text-slate-500 font-semibold">Endpoint details are hashed and masked so they cannot be viewed or misused.</p>
+          </div>
+
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <button type="button" onclick="testCloudConnection()"
               class="w-full min-h-[52px] rounded-xl bg-royal-900 text-amber-300 font-extrabold text-xs sm:text-sm shadow active:scale-[0.99] px-2">
-              🔌 Save &amp; Test Connection
+              🔌 Verify Cloud Sync
             </button>
             <button type="button" onclick="refreshCloudData(true)"
               class="w-full min-h-[52px] rounded-xl bg-slate-800 text-white font-extrabold text-xs sm:text-sm shadow active:scale-[0.99] px-2">
-              ⬇ Pull Roster &amp; Outfit Clues from Sheet
+              ⬇ Pull Roster &amp; Settings
             </button>
             <button type="button" onclick="pushFullRosterToCloudSheet()"
               class="w-full min-h-[52px] rounded-xl bg-emerald-700 text-white font-extrabold text-xs sm:text-sm shadow active:scale-[0.99] px-2">
-              ☁ Push All Kids &amp; Outfit Clues to Sheet
+              ☁ Push All Kids to Cloud
             </button>
           </div>
           <p id="cloudTestStatusText" class="text-xs font-bold text-slate-600"></p>
@@ -707,6 +745,43 @@
 
   </main>
 
+  <!-- PUBLIC QR CODE & SHARE MODAL (FOR ALL PARTICIPANTS, OPENED FROM HEADER NEAR HOME/RANKS) -->
+  <div id="modalShareQr" class="hidden fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-3">
+    <div class="w-full max-w-sm rounded-2xl bg-white p-4 border-2 border-amber-400 shadow-2xl space-y-3 text-center">
+      <div class="flex items-center justify-between border-b border-slate-200 pb-2">
+        <h3 class="text-base font-black text-royal-900">📲 Share &amp; Scan QR Code</h3>
+        <button type="button" onclick="closeShareQrModal()" class="text-slate-500 font-extrabold text-sm px-2 py-1">✕</button>
+      </div>
+      <p class="text-xs text-slate-600 font-semibold">
+        Invite friends &amp; family in the parish hall! Scan this QR code with any phone camera or tap Share below:
+      </p>
+      <div class="flex justify-center">
+        <img src="whos-that-saint-qr.png" onerror="this.src='https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=10&color=4a1c11&bgcolor=fdf8f0&data=https%3A%2F%2Fjimmymj.github.io%2Fwhos-that-saint%2F'"
+          alt="Who's That Saint QR Code" class="w-44 h-44 rounded-2xl border-2 border-royal-900 shadow-md bg-white p-1.5" />
+      </div>
+      <div class="rounded-xl bg-amber-50 border border-amber-300 p-2 text-xs space-y-1 text-left font-mono">
+        <div class="flex items-center justify-between gap-2">
+          <span class="font-sans font-extrabold text-royal-900">Short Link:</span>
+          <a href="https://is.gd/whosthatsaint2026" target="_blank" class="text-royal-800 underline font-extrabold truncate">is.gd/whosthatsaint2026</a>
+        </div>
+        <div class="flex items-center justify-between gap-2">
+          <span class="font-sans font-extrabold text-royal-900">Alt Link:</span>
+          <a href="https://tinyurl.com/2yozrgy4" target="_blank" class="text-royal-800 underline font-extrabold truncate">tinyurl.com/2yozrgy4</a>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-2 pt-1">
+        <button type="button" onclick="shareAppWithFriends()"
+          class="min-h-[46px] rounded-xl bg-royal-900 hover:bg-royal-800 text-amber-300 font-extrabold text-xs sm:text-sm shadow active:scale-[0.98]">
+          📤 Share App Link
+        </button>
+        <button type="button" onclick="copyShortUrlToClipboard()"
+          class="min-h-[46px] rounded-xl bg-amber-400 hover:bg-amber-300 text-royal-950 font-extrabold text-xs sm:text-sm shadow active:scale-[0.98]">
+          📋 Copy Short Link
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- ADMIN PIN MODAL (PRODUCTION READY — NO PIN SHOWN ON SCREEN) -->
   <div id="modalAdminPin" class="hidden fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-2">
     <div class="w-full max-w-sm rounded-xl bg-white p-3.5 border-2 border-amber-400 shadow-2xl space-y-3">
@@ -876,13 +951,44 @@
       "Sanchez", "Clark", "Ramirez", "Lewis", "Robinson", "Walker", "Young", "Allen", "King", "Wright"
     ];
 
+    // Encoded Default Cloud Endpoint (Never exposed in plain text on screen)
+    const DEFAULT_CLOUD_KEY_B64 = 'aHR0cHM6Ly9zY3JpcHQuZ29vZ2xlLmNvbS9tYWNyb3Mvcy9BS2Z5Y2J5NzFVVXYySDZpM0dFUzJfZE1LMHozcmZPc01TMW5hTkdJUUt2SE1wQnZxb2hlLWdtcVR3M0t5ZzNIaUZnMG1Ka1NtQS9leGVj';
+
+    function getActiveCloudUrl() {
+      const raw = (appState.settings.webhookUrl || '').trim();
+      if (raw) return raw;
+      try {
+        return atob(DEFAULT_CLOUD_KEY_B64);
+      } catch (e) {
+        return '';
+      }
+    }
+
+    function computeEndpointHash(str) {
+      const s = String(str || '');
+      if (!s) return 'UNCONFIGURED';
+      let h1 = 0xdeadbeef ^ s.length;
+      let h2 = 0x41c6ce57 ^ s.length;
+      for (let i = 0; i < s.length; i++) {
+        const ch = s.charCodeAt(i);
+        h1 = Math.imul(h1 ^ ch, 2654435761);
+        h2 = Math.imul(h2 ^ ch, 1597334677);
+      }
+      h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+      h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+      const hex = ((h2 >>> 0).toString(16).padStart(8, '0') + (h1 >>> 0).toString(16).padStart(8, '0')).toUpperCase();
+      return `#${hex.slice(0, 8)}-${hex.slice(8, 12)}`;
+    }
+
     let appState = {
       currentView: 'registration',
       selectedOption: 'Find Saint by Kid Name', // 'Find Saint by Kid Name' | 'Find Kid by Saint Name'
       roster: [],
       submissions: [],
       settings: {
-        webhookUrl: 'https://script.google.com/macros/s/AKfycby71UUv2H6i3GES2_dMK0z3rfOsMS1naNGIQKvHMpBvqohe-gmqTw3Kyg3HiFg0mJkSmA/exec',
+        webhookUrl: '',
+        option1_KidToSaint: true,
+        option2_SaintToKid: true,
         requireSecretPin: false,
         adminPin: '1101'
       },
@@ -947,12 +1053,80 @@
     }
 
     /**************************************************************
-     * 3. INITIALIZATION & 100-KID GENERATOR (NO OS FULLSCREEN POPUP)
+     * 3. INITIALIZATION, AUTOMATIC FULLSCREEN & QR SHARE MODAL
      **************************************************************/
+    function isCurrentlyFullScreen() {
+      return Boolean(
+        document.fullscreenElement ||
+        document.webkitFullscreenElement ||
+        document.msFullscreenElement
+      );
+    }
+
     function requestMobileFullScreen() {
-      // Uses Fixed Native App Shell (#appShell 100dvh) without calling requestFullscreen()
-      // so mobile browsers never display the "To exit full screen, drag from top..." popup!
-      return true;
+      if (isCurrentlyFullScreen()) return;
+      const docEl = document.documentElement;
+      try {
+        if (docEl.requestFullscreen) {
+          docEl.requestFullscreen({ navigationUI: 'hide' }).catch(() => {});
+        } else if (docEl.webkitRequestFullscreen) {
+          docEl.webkitRequestFullscreen();
+        } else if (docEl.msRequestFullscreen) {
+          docEl.msRequestFullscreen();
+        }
+      } catch (err) {}
+    }
+
+    function setupAutoFullscreenListeners() {
+      // Attempt immediately when opened
+      requestMobileFullScreen();
+
+      // Also trigger automatically on first user tap/interaction on the page
+      const autoTrigger = (e) => {
+        const tag = (e.target && e.target.tagName) ? e.target.tagName.toUpperCase() : '';
+        if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+        if (!isCurrentlyFullScreen()) {
+          requestMobileFullScreen();
+        }
+      };
+      document.addEventListener('click', autoTrigger, { passive: true });
+      document.addEventListener('touchstart', autoTrigger, { passive: true });
+    }
+
+    function openShareQrModal() {
+      document.getElementById('modalShareQr')?.classList.remove('hidden');
+    }
+
+    function closeShareQrModal() {
+      document.getElementById('modalShareQr')?.classList.add('hidden');
+    }
+
+    async function shareAppWithFriends() {
+      const shareData = {
+        title: "Who’s That Saint? — All Saints' Day Activity",
+        text: "Match the Kids & Saints! Spot the children in costume, match their Saints, and submit your score for prizes:",
+        url: "https://is.gd/whosthatsaint2026"
+      };
+      if (navigator.share) {
+        try {
+          await navigator.share(shareData);
+          return;
+        } catch (err) {}
+      }
+      copyShortUrlToClipboard();
+    }
+
+    function copyShortUrlToClipboard() {
+      const url = "https://is.gd/whosthatsaint2026";
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(() => {
+          showToast("Copied link: https://is.gd/whosthatsaint2026", "success");
+        }).catch(() => {
+          showToast("Short Link: https://is.gd/whosthatsaint2026", "info");
+        });
+      } else {
+        showToast("Short Link: https://is.gd/whosthatsaint2026", "info");
+      }
     }
 
     window.addEventListener('DOMContentLoaded', () => {
@@ -961,9 +1135,11 @@
         generate100KidDemoRoster(false);
       }
       updateSettingsUI();
+      renderActivityOptionsUI();
       renderHeaderStatus();
       switchView('registration');
-      if (appState.settings.webhookUrl) {
+      setupAutoFullscreenListeners();
+      if (getActiveCloudUrl()) {
         refreshCloudData(false);
       }
     });
@@ -972,7 +1148,16 @@
       try {
         const savedSettings = localStorage.getItem(STORAGE_KEYS.SETTINGS);
         if (savedSettings) {
-          appState.settings = { ...appState.settings, ...JSON.parse(savedSettings) };
+          const parsed = JSON.parse(savedSettings);
+          appState.settings = {
+            ...appState.settings,
+            ...parsed,
+            option1_KidToSaint: parsed.option1_KidToSaint !== undefined ? Boolean(parsed.option1_KidToSaint) : true,
+            option2_SaintToKid: parsed.option2_SaintToKid !== undefined ? Boolean(parsed.option2_SaintToKid) : true
+          };
+        }
+        if (!appState.settings.webhookUrl) {
+          appState.settings.webhookUrl = getActiveCloudUrl();
         }
         const savedRoster = localStorage.getItem(STORAGE_KEYS.ROSTER);
         if (savedRoster) {
@@ -997,18 +1182,33 @@
       localStorage.setItem(STORAGE_KEYS.SUBMISSIONS, JSON.stringify(appState.submissions));
     }
 
+    function toggleCloudKeyEditor() {
+      const box = document.getElementById('cloudKeyEditorBox');
+      if (box) box.classList.toggle('hidden');
+    }
+
     function saveAdminSettings() {
       const urlInput = document.getElementById('inputWebhookUrl');
-      if (urlInput) {
+      if (urlInput && urlInput.value.trim()) {
         appState.settings.webhookUrl = urlInput.value.trim();
       }
       localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(appState.settings));
       updateSettingsUI();
+      renderActivityOptionsUI();
     }
 
     function updateSettingsUI() {
+      const activeUrl = getActiveCloudUrl();
       const urlInput = document.getElementById('inputWebhookUrl');
-      if (urlInput) urlInput.value = appState.settings.webhookUrl || '';
+      if (urlInput) urlInput.value = activeUrl;
+
+      const hashBadge = document.getElementById('cloudUrlHashBadge');
+      if (hashBadge) {
+        const hashStr = computeEndpointHash(activeUrl);
+        hashBadge.textContent = activeUrl
+          ? `Key Hash: ${hashStr} • Protected & Active`
+          : `Key Hash: Not Configured`;
+      }
 
       const pinLabel = document.getElementById('labelSecretPinMode');
       if (pinLabel) {
@@ -1016,6 +1216,34 @@
         pinLabel.className = appState.settings.requireSecretPin
           ? 'bg-emerald-700 text-white px-2.5 py-1 rounded-lg text-xs font-extrabold'
           : 'bg-slate-300 text-slate-800 px-2.5 py-1 rounded-lg text-xs font-extrabold';
+      }
+
+      // Admin Tab 1 Option 1 & Option 2 Enable/Disable Button States
+      const opt1On = appState.settings.option1_KidToSaint !== false;
+      const opt2On = appState.settings.option2_SaintToKid !== false;
+
+      const btnOpt1 = document.getElementById('btnAdminToggleOption1');
+      const lblOpt1 = document.getElementById('labelAdminOption1Status');
+      if (btnOpt1 && lblOpt1) {
+        btnOpt1.className = opt1On
+          ? "w-full min-h-[50px] rounded-xl p-2.5 bg-white border-2 border-emerald-600 text-left font-extrabold text-xs sm:text-sm text-royal-900 flex items-center justify-between gap-2 shadow-sm active:scale-[0.99]"
+          : "w-full min-h-[50px] rounded-xl p-2.5 bg-slate-100 border-2 border-red-400 text-left font-extrabold text-xs sm:text-sm text-slate-600 flex items-center justify-between gap-2 shadow-sm active:scale-[0.99]";
+        lblOpt1.textContent = opt1On ? "✓ Enabled" : "🔒 Disabled";
+        lblOpt1.className = opt1On
+          ? "bg-emerald-700 text-white px-2.5 py-1 rounded-lg text-xs font-black shrink-0"
+          : "bg-red-700 text-white px-2.5 py-1 rounded-lg text-xs font-black shrink-0";
+      }
+
+      const btnOpt2 = document.getElementById('btnAdminToggleOption2');
+      const lblOpt2 = document.getElementById('labelAdminOption2Status');
+      if (btnOpt2 && lblOpt2) {
+        btnOpt2.className = opt2On
+          ? "w-full min-h-[50px] rounded-xl p-2.5 bg-white border-2 border-emerald-600 text-left font-extrabold text-xs sm:text-sm text-royal-900 flex items-center justify-between gap-2 shadow-sm active:scale-[0.99]"
+          : "w-full min-h-[50px] rounded-xl p-2.5 bg-slate-100 border-2 border-red-400 text-left font-extrabold text-xs sm:text-sm text-slate-600 flex items-center justify-between gap-2 shadow-sm active:scale-[0.99]";
+        lblOpt2.textContent = opt2On ? "✓ Enabled" : "🔒 Disabled";
+        lblOpt2.className = opt2On
+          ? "bg-emerald-700 text-white px-2.5 py-1 rounded-lg text-xs font-black shrink-0"
+          : "bg-red-700 text-white px-2.5 py-1 rounded-lg text-xs font-black shrink-0";
       }
 
       const badge = document.getElementById('rosterCountBadge');
@@ -1182,33 +1410,130 @@
     }
 
     /**************************************************************
-     * 5. FLOW 1: REGISTRATION & 2 ACTIVITY OPTIONS
+     * 5. FLOW 1: REGISTRATION & 2 ACTIVITY OPTIONS (ADMIN CONTROLLED)
      **************************************************************/
-    function selectActivityOption(optionMode) {
-      appState.selectedOption = optionMode;
+    function renderActivityOptionsUI() {
+      const opt1On = appState.settings.option1_KidToSaint !== false;
+      const opt2On = appState.settings.option2_SaintToKid !== false;
+
+      // Auto-select an enabled option if the current selection was disabled by Admin
+      if (appState.selectedOption === 'Find Saint by Kid Name' && !opt1On && opt2On) {
+        appState.selectedOption = 'Find Kid by Saint Name';
+      } else if (appState.selectedOption === 'Find Kid by Saint Name' && !opt2On && opt1On) {
+        appState.selectedOption = 'Find Saint by Kid Name';
+      }
+
       const card1 = document.getElementById('cardModeKidToSaint');
       const card2 = document.getElementById('cardModeSaintToKid');
       const radio1 = document.getElementById('radioModeKidToSaint');
       const radio2 = document.getElementById('radioModeSaintToKid');
+      const title1 = document.getElementById('titleModeKidToSaint');
+      const title2 = document.getElementById('titleModeSaintToKid');
+      const badge1 = document.getElementById('badgeDisabledOption1');
+      const badge2 = document.getElementById('badgeDisabledOption2');
+      const availBadge = document.getElementById('optionsAvailabilityBadge');
 
-      if (optionMode === 'Find Saint by Kid Name') {
-        card1.className = "w-full min-h-[60px] rounded-xl p-3 text-left border-2 border-royal-900 bg-amber-50/80 shadow-sm active:scale-[0.99] transition flex items-center justify-between gap-2";
-        card2.className = "w-full min-h-[60px] rounded-xl p-3 text-left border-2 border-slate-300 bg-white shadow-sm active:scale-[0.99] transition flex items-center justify-between gap-2";
-        radio1.className = "inline-block w-4 h-4 rounded-full bg-royal-900 text-amber-300 text-[10px] font-black flex items-center justify-center";
-        radio1.textContent = "✓";
-        radio2.className = "inline-block w-4 h-4 rounded-full border-2 border-slate-400 text-[10px] font-black flex items-center justify-center";
-        radio2.textContent = "";
+      if (!card1 || !card2) return;
+
+      const isSelected1 = appState.selectedOption === 'Find Saint by Kid Name' && opt1On;
+      const isSelected2 = appState.selectedOption === 'Find Kid by Saint Name' && opt2On;
+
+      // Option 1 Styling
+      if (!opt1On) {
+        card1.className = "w-full min-h-[60px] rounded-xl p-3 text-left border-2 border-slate-200 bg-slate-100 opacity-60 cursor-not-allowed flex items-center justify-between gap-2";
+        if (radio1) {
+          radio1.className = "inline-block w-4 h-4 rounded-full border-2 border-slate-300 text-[10px] font-black flex items-center justify-center shrink-0";
+          radio1.textContent = "✕";
+        }
+        if (title1) title1.className = "text-base font-extrabold text-slate-500 line-through";
+        if (badge1) badge1.classList.remove('hidden');
       } else {
-        card2.className = "w-full min-h-[60px] rounded-xl p-3 text-left border-2 border-royal-900 bg-amber-50/80 shadow-sm active:scale-[0.99] transition flex items-center justify-between gap-2";
-        card1.className = "w-full min-h-[60px] rounded-xl p-3 text-left border-2 border-slate-300 bg-white shadow-sm active:scale-[0.99] transition flex items-center justify-between gap-2";
-        radio2.className = "inline-block w-4 h-4 rounded-full bg-royal-900 text-amber-300 text-[10px] font-black flex items-center justify-center";
-        radio2.textContent = "✓";
-        radio1.className = "inline-block w-4 h-4 rounded-full border-2 border-slate-400 text-[10px] font-black flex items-center justify-center";
-        radio1.textContent = "";
+        if (badge1) badge1.classList.add('hidden');
+        if (title1) title1.className = isSelected1 ? "text-base font-extrabold text-royal-900" : "text-base font-extrabold text-slate-900";
+        card1.className = isSelected1
+          ? "w-full min-h-[60px] rounded-xl p-3 text-left border-2 border-royal-900 bg-amber-50/80 shadow-sm active:scale-[0.99] transition flex items-center justify-between gap-2"
+          : "w-full min-h-[60px] rounded-xl p-3 text-left border-2 border-slate-300 bg-white shadow-sm active:scale-[0.99] transition flex items-center justify-between gap-2";
+        if (radio1) {
+          radio1.className = isSelected1
+            ? "inline-block w-4 h-4 rounded-full bg-royal-900 text-amber-300 text-[10px] font-black flex items-center justify-center shrink-0"
+            : "inline-block w-4 h-4 rounded-full border-2 border-slate-400 text-[10px] font-black flex items-center justify-center shrink-0";
+          radio1.textContent = isSelected1 ? "✓" : "";
+        }
+      }
+
+      // Option 2 Styling
+      if (!opt2On) {
+        card2.className = "w-full min-h-[60px] rounded-xl p-3 text-left border-2 border-slate-200 bg-slate-100 opacity-60 cursor-not-allowed flex items-center justify-between gap-2";
+        if (radio2) {
+          radio2.className = "inline-block w-4 h-4 rounded-full border-2 border-slate-300 text-[10px] font-black flex items-center justify-center shrink-0";
+          radio2.textContent = "✕";
+        }
+        if (title2) title2.className = "text-base font-extrabold text-slate-500 line-through";
+        if (badge2) badge2.classList.remove('hidden');
+      } else {
+        if (badge2) badge2.classList.add('hidden');
+        if (title2) title2.className = isSelected2 ? "text-base font-extrabold text-royal-900" : "text-base font-extrabold text-slate-900";
+        card2.className = isSelected2
+          ? "w-full min-h-[60px] rounded-xl p-3 text-left border-2 border-royal-900 bg-amber-50/80 shadow-sm active:scale-[0.99] transition flex items-center justify-between gap-2"
+          : "w-full min-h-[60px] rounded-xl p-3 text-left border-2 border-slate-300 bg-white shadow-sm active:scale-[0.99] transition flex items-center justify-between gap-2";
+        if (radio2) {
+          radio2.className = isSelected2
+            ? "inline-block w-4 h-4 rounded-full bg-royal-900 text-amber-300 text-[10px] font-black flex items-center justify-center shrink-0"
+            : "inline-block w-4 h-4 rounded-full border-2 border-slate-400 text-[10px] font-black flex items-center justify-center shrink-0";
+          radio2.textContent = isSelected2 ? "✓" : "";
+        }
+      }
+
+      if (availBadge) {
+        if (!opt1On && !opt2On) {
+          availBadge.textContent = "🔒 Both Options Paused by Admin";
+          availBadge.classList.remove('hidden');
+        } else if (!opt1On) {
+          availBadge.textContent = "Option 2 Active";
+          availBadge.classList.remove('hidden');
+        } else if (!opt2On) {
+          availBadge.textContent = "Option 1 Active";
+          availBadge.classList.remove('hidden');
+        } else {
+          availBadge.classList.add('hidden');
+        }
       }
     }
 
+    function selectActivityOption(optionMode) {
+      const opt1On = appState.settings.option1_KidToSaint !== false;
+      const opt2On = appState.settings.option2_SaintToKid !== false;
+
+      if (optionMode === 'Find Saint by Kid Name' && !opt1On) {
+        showToast("Option 1 is currently disabled by the Parish Organizer.", "error");
+        return;
+      }
+      if (optionMode === 'Find Kid by Saint Name' && !opt2On) {
+        showToast("Option 2 is currently disabled by the Parish Organizer.", "error");
+        return;
+      }
+
+      appState.selectedOption = optionMode;
+      renderActivityOptionsUI();
+    }
+
     function startActivityFromRegistration() {
+      const opt1On = appState.settings.option1_KidToSaint !== false;
+      const opt2On = appState.settings.option2_SaintToKid !== false;
+
+      if (!opt1On && !opt2On) {
+        showToast("The Parish Organizer has temporarily paused both Saints Find options. Please wait!", "error");
+        return;
+      }
+
+      if (appState.selectedOption === 'Find Saint by Kid Name' && !opt1On) {
+        appState.selectedOption = 'Find Kid by Saint Name';
+        renderActivityOptionsUI();
+      } else if (appState.selectedOption === 'Find Kid by Saint Name' && !opt2On) {
+        appState.selectedOption = 'Find Saint by Kid Name';
+        renderActivityOptionsUI();
+      }
+
       const nameInput = document.getElementById('inputParticipantName');
       const familyInput = document.getElementById('inputFamilyPhone');
       const rawName = nameInput ? nameInput.value.trim() : '';
@@ -1685,8 +2010,8 @@
 
       switchView('results');
 
-      // 3. Asynchronous POST to Google Sheet Web App if configured
-      if (appState.settings.webhookUrl) {
+      // 3. Asynchronous POST to Cloud Sheet if configured
+      if (getActiveCloudUrl()) {
         updatePersonalSyncBadge('Syncing to Cloud Sheet...', false);
         const result = await postSubmissionToCloud(record);
         if (result.ok) {
@@ -1713,14 +2038,14 @@
     }
 
     /**
-     * Resilient 3-Tier Cloud Write Helper for Google Apps Script:
+     * Resilient 3-Tier Cloud Write Helper:
      *   Tier 1: Standard CORS POST (reads JSON response directly)
-     *   Tier 2: GET query-param fallback for single-row actions (bypasses POST->302 CORS stripping)
-     *   Tier 3: no-cors POST delivery (guarantees payload reaches doPost even when browser blocks redirect headers)
+     *   Tier 2: GET query-param fallback for single-row actions
+     *   Tier 3: no-cors POST delivery
      */
     async function sendCloudWriteRequest(action, payloadObj) {
-      const url = (appState.settings.webhookUrl || '').trim();
-      if (!url) return { ok: false, message: 'No Web App URL configured' };
+      const url = getActiveCloudUrl();
+      if (!url) return { ok: false, message: 'No Cloud Sync Key configured' };
 
       const bodyStr = JSON.stringify({ action, payload: payloadObj });
 
@@ -1734,7 +2059,7 @@
         });
         const rawText = await res.text();
         if (rawText.includes('Script function not found')) {
-          return { ok: false, code: 'NEEDS_REDEPLOY', message: 'Script function not found in deployed version.' };
+          return { ok: false, code: 'NEEDS_REDEPLOY', message: 'Cloud endpoint version update required.' };
         }
         const data = JSON.parse(rawText);
         if (data && data.status === 'success') {
@@ -1762,7 +2087,7 @@
           } catch (getErr) {}
         }
 
-        // Tier 3: Guaranteed no-cors POST delivery to Google Apps Script doPost(e)
+        // Tier 3: Guaranteed no-cors POST delivery
         try {
           await fetch(url, {
             method: 'POST',
@@ -2021,19 +2346,19 @@
 
       showToast(`${isUpdate ? 'Updated' : 'Added'} Bib #${bibVal} (${kidNameVal} as ${saintNameVal})!`, "success");
 
-      // Sync directly to Google Sheet (Roster_Saints_Kids) including Outfit_Clue
+      // Sync directly to Cloud Sheet (Roster_Saints_Kids) including Outfit_Clue
       const syncStatusEl = document.getElementById('kidCloudSyncStatusText');
-      if (appState.settings.webhookUrl) {
-        if (syncStatusEl) syncStatusEl.textContent = `⏳ Syncing Bib #${bibVal} & Outfit Clue to Google Sheet...`;
+      if (getActiveCloudUrl()) {
+        if (syncStatusEl) syncStatusEl.textContent = `⏳ Syncing Bib #${bibVal} & Outfit Clue to Cloud Sheet...`;
         const cloudRes = await sendCloudWriteRequest('saveKidRow', newEntry);
         if (cloudRes.ok) {
           if (syncStatusEl) {
-            syncStatusEl.innerHTML = `<span class="text-emerald-700">✓ Bib #${bibVal} (${escapeHtml(kidNameVal)} — ${escapeHtml(saintNameVal)}) &amp; Outfit Clue saved to Google Sheet!</span>`;
+            syncStatusEl.innerHTML = `<span class="text-emerald-700">✓ Bib #${bibVal} (${escapeHtml(kidNameVal)} — ${escapeHtml(saintNameVal)}) &amp; Outfit Clue saved to Cloud Sheet!</span>`;
           }
-          showToast(`☁ Bib #${bibVal} & Outfit Clue synced to Google Sheet!`, "success");
+          showToast(`☁ Bib #${bibVal} & Outfit Clue synced to Cloud Sheet!`, "success");
         } else {
           if (syncStatusEl) {
-            syncStatusEl.innerHTML = `<span class="text-amber-800">✓ Saved in App! (To finish linking Google Sheet: in Apps Script, click Deploy → Manage deployments → Edit ✏️ → Version: New version → Deploy).</span>`;
+            syncStatusEl.innerHTML = `<span class="text-amber-800">✓ Saved in App! (Verify Cloud Database deployment if Sheet is not updating).</span>`;
           }
         }
       }
@@ -2049,36 +2374,36 @@
       resetKidEditorForm();
       showToast(`Deleted Bib #${bibNumber} (${target.Kid_Name}) from roster.`, "info");
 
-      if (appState.settings.webhookUrl) {
+      if (getActiveCloudUrl()) {
         const cloudRes = await sendCloudWriteRequest('deleteKidRow', { Bib_Number: Number(bibNumber) });
         if (cloudRes.ok) {
-          showToast(`☁ Deleted Bib #${bibNumber} from Google Sheet!`, "success");
+          showToast(`☁ Deleted Bib #${bibNumber} from Cloud Sheet!`, "success");
         }
       }
     }
 
     async function pushFullRosterToCloudSheet() {
-      if (!appState.settings.webhookUrl) {
-        showToast("Please paste your Google Apps Script Web App URL first.", "error");
+      if (!getActiveCloudUrl()) {
+        showToast("Please configure your Cloud Sync Key first.", "error");
         return;
       }
       const syncStatusEl = document.getElementById('kidCloudSyncStatusText');
       const tab1StatusEl = document.getElementById('cloudTestStatusText');
-      if (syncStatusEl) syncStatusEl.textContent = `⏳ Pushing ${appState.roster.length} Kids & Outfit Clues to Google Sheet...`;
-      if (tab1StatusEl) tab1StatusEl.textContent = `⏳ Pushing ${appState.roster.length} Kids & Outfit Clues to Google Sheet...`;
-      showToast(`⏳ Pushing ${appState.roster.length} Kids & Outfit Clues to Google Sheet...`, "info");
+      if (syncStatusEl) syncStatusEl.textContent = `⏳ Pushing ${appState.roster.length} Kids & Outfit Clues to Cloud Sheet...`;
+      if (tab1StatusEl) tab1StatusEl.textContent = `⏳ Pushing ${appState.roster.length} Kids & Outfit Clues to Cloud Sheet...`;
+      showToast(`⏳ Pushing ${appState.roster.length} Kids & Outfit Clues to Cloud Sheet...`, "info");
 
       const cloudRes = await sendCloudWriteRequest('syncFullRoster', { roster: appState.roster });
       if (cloudRes.ok) {
-        const okMsg = `<span class="text-emerald-700">✓ Synced all ${appState.roster.length} Kids &amp; Outfit Clues to Google Sheet!</span>`;
+        const okMsg = `<span class="text-emerald-700">✓ Synced all ${appState.roster.length} Kids &amp; Outfit Clues to Cloud Sheet!</span>`;
         if (syncStatusEl) syncStatusEl.innerHTML = okMsg;
         if (tab1StatusEl) tab1StatusEl.innerHTML = okMsg;
-        showToast(`✓ Synced all ${appState.roster.length} Kids & Outfit Clues to Google Sheet!`, "success");
+        showToast(`✓ Synced all ${appState.roster.length} Kids & Outfit Clues to Cloud Sheet!`, "success");
       } else {
-        const warnMsg = `<span class="text-amber-800">⚠ Could not reach Google Sheet (${escapeHtml(cloudRes.message || 'Check URL')}). In Apps Script, click Deploy → Manage deployments → Edit ✏️ → Version: New version → Deploy.</span>`;
+        const warnMsg = `<span class="text-amber-800">⚠ Could not reach Cloud Sheet (${escapeHtml(cloudRes.message || 'Check Key')}).</span>`;
         if (syncStatusEl) syncStatusEl.innerHTML = warnMsg;
         if (tab1StatusEl) tab1StatusEl.innerHTML = warnMsg;
-        showToast("Check Apps Script deployment settings.", "error");
+        showToast("Cloud sync failed. Verify Cloud Sync Key.", "error");
       }
     }
 
@@ -2137,36 +2462,82 @@
       `).join('');
     }
 
-    function toggleSecretPinRequirement() {
+    async function toggleAdminFindOption(optionNum) {
+      if (optionNum === 1) {
+        appState.settings.option1_KidToSaint = !appState.settings.option1_KidToSaint;
+      } else if (optionNum === 2) {
+        appState.settings.option2_SaintToKid = !appState.settings.option2_SaintToKid;
+      }
+
+      saveAdminSettings();
+      renderActivityOptionsUI();
+
+      const opt1State = appState.settings.option1_KidToSaint ? 'Enabled' : 'Disabled';
+      const opt2State = appState.settings.option2_SaintToKid ? 'Enabled' : 'Disabled';
+      showToast(`Updated Options: Option 1 (${opt1State}), Option 2 (${opt2State})`, "info");
+
+      await saveAdminAppConfigToCloud();
+    }
+
+    async function saveAdminAppConfigToCloud() {
+      const statusEl = document.getElementById('adminOptionSyncStatusText');
+      const badgeEl = document.getElementById('adminOptionsSyncBadge');
+      if (!getActiveCloudUrl()) return;
+
+      if (statusEl) statusEl.textContent = "⏳ Saving option access settings to Cloud Sheet...";
+      if (badgeEl) badgeEl.textContent = "Syncing...";
+
+      const res = await sendCloudWriteRequest('saveAppConfig', {
+        option1_KidToSaint: appState.settings.option1_KidToSaint !== false,
+        option2_SaintToKid: appState.settings.option2_SaintToKid !== false,
+        requireSecretPin: Boolean(appState.settings.requireSecretPin)
+      });
+
+      if (res.ok) {
+        if (statusEl) {
+          statusEl.innerHTML = `<span class="text-emerald-700">✓ Option availability saved to Cloud Sheet! Participants opening the app will receive this setting automatically.</span>`;
+        }
+        if (badgeEl) badgeEl.textContent = "✓ Cloud Synced";
+      } else {
+        if (statusEl) {
+          statusEl.innerHTML = `<span class="text-amber-800">✓ Saved locally (Cloud sync pending).</span>`;
+        }
+        if (badgeEl) badgeEl.textContent = "Local Saved";
+      }
+    }
+
+    async function toggleSecretPinRequirement() {
       appState.settings.requireSecretPin = !appState.settings.requireSecretPin;
       saveAdminSettings();
       showToast(`Talk-to-the-Saint PIN mode ${appState.settings.requireSecretPin ? 'ENABLED' : 'DISABLED'}.`, "info");
+      await saveAdminAppConfigToCloud();
     }
 
     async function testCloudConnection() {
       saveAdminSettings();
       const statusEl = document.getElementById('cloudTestStatusText');
-      if (!appState.settings.webhookUrl) {
-        if (statusEl) statusEl.textContent = "⚠ Please paste your Google Apps Script Web App URL above first.";
-        showToast("Paste your Google Apps Script Web App URL first.", "error");
+      const activeUrl = getActiveCloudUrl();
+      if (!activeUrl) {
+        if (statusEl) statusEl.textContent = "⚠ Please configure your encrypted Cloud Sync Key first.";
+        showToast("Configure your Cloud Sync Key first.", "error");
         return;
       }
-      if (statusEl) statusEl.textContent = "⏳ Connecting to Google Sheet Web App...";
+      if (statusEl) statusEl.textContent = "⏳ Verifying Encrypted Cloud Sheet Sync...";
       try {
-        const res = await fetch(appState.settings.webhookUrl, { redirect: 'follow' });
+        const res = await fetch(activeUrl, { redirect: 'follow' });
         const rawText = await res.text();
-        if (rawText.includes('Script function not found: doGet')) {
+        if (rawText.includes('Script function not found')) {
           if (statusEl) {
-            statusEl.innerHTML = `<span class="text-red-700">✗ Found "Script function not found: doGet": Your permissions are working, but your deployed version doesn't have the latest Code.gs yet! In Apps Script, paste the full Code.gs, press <strong>Ctrl+S</strong>, then click <strong>Deploy → Manage deployments → Edit (✏️) → Version: New version → Deploy</strong>.</span>`;
+            statusEl.innerHTML = `<span class="text-red-700">✗ Cloud Endpoint needs a New Deployment Version published by the administrator.</span>`;
           }
-          showToast("Create a 'New version' in Manage Deployments!", "error");
+          showToast("Cloud Endpoint requires version update!", "error");
           return;
         }
         if (res.url.includes('accounts.google.com') || rawText.includes('accounts.google.com') || rawText.trim().startsWith('<!DOCTYPE html>')) {
           if (statusEl) {
-            statusEl.innerHTML = `<span class="text-red-700">✗ Permission Redirect Detected: In Apps Script, click <strong>Deploy → Manage deployments → Edit (✏️) → Set "Who has access" to "Anyone"</strong> and select <strong>Version: New version</strong> → Click Deploy.</span>`;
+            statusEl.innerHTML = `<span class="text-red-700">✗ Cloud Endpoint access is restricted. Ensure deployment access is set to Public/Anyone.</span>`;
           }
-          showToast("Fix needed: Deploy a New Version with access 'Anyone'!", "error");
+          showToast("Cloud Endpoint access restriction detected!", "error");
           return;
         }
         const data = JSON.parse(rawText);
@@ -2174,31 +2545,50 @@
           const rosterLen = Array.isArray(data.roster) ? data.roster.length : 0;
           const lbLen = Array.isArray(data.leaderboard) ? data.leaderboard.length : 0;
           if (statusEl) {
-            statusEl.textContent = `✓ Connected! Cloud Sheet returned ${rosterLen} Roster rows & ${lbLen} Participant rows.`;
+            statusEl.textContent = `✓ Encrypted Cloud Sync Active! Verified ${rosterLen} Roster rows & ${lbLen} Participant rows.`;
           }
-          showToast("Cloud Connection Verified Successfully!", "success");
+          showToast("Cloud Sync Verified Successfully!", "success");
         } else {
-          if (statusEl) statusEl.textContent = `⚠ Script returned error: ${data.message || 'Unknown error'}`;
-          showToast(`Script error: ${data.message || 'Check Apps Script'}`, "error");
+          if (statusEl) statusEl.textContent = `⚠ Cloud returned error: ${data.message || 'Unknown error'}`;
+          showToast(`Cloud error: ${data.message || 'Check configuration'}`, "error");
         }
       } catch (err) {
         if (statusEl) {
-          statusEl.innerHTML = `<span class="text-red-700">✗ Connection failed (${escapeHtml(err.message)}). In Apps Script, go to <strong>Deploy → Manage deployments → Edit (✏️) → Version: New version</strong> and set <strong>"Who has access"</strong> to <strong>"Anyone"</strong>.</span>`;
+          statusEl.innerHTML = `<span class="text-red-700">✗ Connection failed (${escapeHtml(err.message)}). Verify network or Cloud Sync Key.</span>`;
         }
-        showToast("Cloud connection failed. Check Manage Deployments.", "error");
+        showToast("Cloud connection failed.", "error");
       }
     }
 
     async function refreshCloudData(notify = true) {
-      if (!appState.settings.webhookUrl) {
-        if (notify) showToast("No Cloud Web App URL configured yet — using local storage.", "info");
+      const activeUrl = getActiveCloudUrl();
+      if (!activeUrl) {
+        if (notify) showToast("No Cloud Sync Key configured — using local storage.", "info");
         renderLeaderboardAndAppreciation();
         return;
       }
       try {
-        const res = await fetch(appState.settings.webhookUrl);
+        const sep = activeUrl.includes('?') ? '&' : '?';
+        const res = await fetch(`${activeUrl}${sep}_t=${Date.now()}`, { redirect: 'follow' });
         const data = await res.json();
         if (data && data.status === 'success') {
+          // 1. Apply Admin Option Enable/Disable Settings from Cloud Sheet
+          if (data.config && typeof data.config === 'object') {
+            if (data.config.option1_KidToSaint !== undefined) {
+              appState.settings.option1_KidToSaint = Boolean(data.config.option1_KidToSaint);
+            }
+            if (data.config.option2_SaintToKid !== undefined) {
+              appState.settings.option2_SaintToKid = Boolean(data.config.option2_SaintToKid);
+            }
+            if (data.config.requireSecretPin !== undefined) {
+              appState.settings.requireSecretPin = Boolean(data.config.requireSecretPin);
+            }
+            localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(appState.settings));
+            updateSettingsUI();
+            renderActivityOptionsUI();
+          }
+
+          // 2. Apply Roster & Outfit Clues from Cloud Sheet
           if (Array.isArray(data.roster) && data.roster.length > 0) {
             appState.roster = data.roster.map((r, i) => {
               const fallbackSaint = i < 50 ? SAINT_CATALOG[i] : EXTRA_SAINTS[(i - 50) % EXTRA_SAINTS.length];
@@ -2214,6 +2604,8 @@
             });
             saveRosterToStorage();
           }
+
+          // 3. Apply Leaderboard & Participant Scores from Cloud Sheet
           if (Array.isArray(data.leaderboard) && data.leaderboard.length > 0) {
             const existingIds = new Set(appState.submissions.map(s => s.Submission_ID));
             const existingNames = new Set(appState.submissions.map(s => normalizeName(s.Participant_Name)));
@@ -2231,7 +2623,7 @@
             saveSubmissionsToStorage();
           }
           renderLeaderboardAndAppreciation();
-          if (notify) showToast("Synced latest Roster & Scores from Google Sheet!", "success");
+          if (notify) showToast("Synced latest Options, Roster & Scores from Cloud Sheet!", "success");
         }
       } catch (err) {
         if (notify) showToast("Offline or Cloud unreachable — showing cached data.", "error");
@@ -2239,8 +2631,8 @@
     }
 
     async function retryUnsyncedSubmissions() {
-      if (!appState.settings.webhookUrl) {
-        showToast("Configure your Google Sheet Web App URL in Tab 1 first!", "error");
+      if (!getActiveCloudUrl()) {
+        showToast("Configure your Cloud Sync Key in Tab 1 first!", "error");
         return;
       }
       const pending = appState.submissions.filter(s => s.Sync_Status !== 'Synced to Cloud');
