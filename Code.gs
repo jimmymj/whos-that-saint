@@ -31,19 +31,6 @@ const ROSTER_HEADERS = [
   'Secret_Pin'
 ];
 
-const STARTER_KIDS_WITH_OUTFIT_CLUES = [
-  [1, 'Noah Thomas', 'St. Francis of Assisi', 'PreK-2', 'Patron saint of animals, birds, and ecology who loved Lady Poverty', 'Brown Franciscan friar robe tied with a white 3-knot rope belt, plush bird or wolf prop', '101'],
-  [2, 'Emma Garcia', 'St. Thérèse of Lisieux', 'PreK-2', 'Known as the Little Flower who practiced the Little Way of love', 'Brown and black Carmelite habit with white veil, holding red roses and a crucifix', '102'],
-  [3, 'Liam Miller', 'St. Michael the Archangel', 'PreK-2', 'Leader of the heavenly armies who defeated the dragon', 'Shining Roman breastplate armor, large angel wings, red cape, sword and shield', '103'],
-  [4, 'Olivia Davis', 'St. Joan of Arc', 'Grades 3-5', 'Teenage French heroine who led troops into battle', 'Silver knight armor over tunic, carrying a white French fleur-de-lis banner and sword', '104'],
-  [5, 'Lucas Rodriguez', 'St. Patrick', 'Grades 3-5', 'Used the three-leaf shamrock to teach the Holy Trinity in Ireland', 'Green bishop vestments, tall gold mitre hat, pastoral staff, and a green shamrock', '105'],
-  [6, 'Sophia Martinez', 'St. Teresa of Calcutta', 'Grades 3-5', 'Founder of the Missionaries of Charity serving the poorest of the poor', 'White cotton sari with three royal-blue border stripes and a small shoulder crucifix', '106'],
-  [7, 'Mateo Hernandez', 'St. Juan Diego', 'Grades 3-5', 'Humble peasant whose tilma holds the miraculous image of Our Lady of Guadalupe', 'Beige woven tilma poncho painted with Our Lady of Guadalupe and red roses inside', '107'],
-  [8, 'Isabella Lopez', 'St. Kateri Tekakwitha', 'Grades 6-8', 'Lily of the Mohawks and first Native American canonized saint', 'Fringed buckskin tunic, braided hair, woven shawl, holding a handmade wooden cross and lily', '108'],
-  [9, 'Ethan Gonzalez', 'St. Carlo Acutis', 'Grades 6-8', 'Modern computer-coding teenager who cataloged Eucharistic miracles online', 'Red polo shirt or zip hoodie, jeans, sneakers, backpack, and a laptop prop', '109'],
-  [10, 'Mia Wilson', 'St. Cecilia', 'Grades 6-8', 'Early Roman martyr and patron saint of musicians and church music', 'Flowing Roman gown with flower crown, holding a small harp, violin, flute, or keyboard', '110']
-];
-
 function sanitizeCellForSheet(rawVal, maxLen) {
   const limit = maxLen || 220;
   let str = String(rawVal === null || rawVal === undefined ? '' : rawVal).trim();
@@ -150,36 +137,6 @@ function setupSheetStructure() {
     .setBackground('#4a1c11')
     .setFontColor('#fde68a');
   rosterSheet.setFrozenRows(1);
-
-  const lastRow = rosterSheet.getLastRow();
-  if (lastRow <= 11) {
-    rosterSheet.getRange(2, 1, STARTER_KIDS_WITH_OUTFIT_CLUES.length, ROSTER_HEADERS.length)
-      .setValues(STARTER_KIDS_WITH_OUTFIT_CLUES);
-  } else {
-    const existingRange = rosterSheet.getRange(2, 1, lastRow - 1, ROSTER_HEADERS.length);
-    const rows = existingRange.getValues();
-    const updatedRows = rows.map(function(row, idx) {
-      const bib = row[0] || (idx + 1);
-      const kid = row[1] || '';
-      const saint = row[2] || '';
-      const cat = row[3] || 'Grades 3-5';
-      const bioClue = row[4] || '';
-      let outfitClue = String(row[5] || '').trim();
-      let pin = String(row[6] || '').trim();
-
-      if (/^\d{3,4}$/.test(outfitClue) && !pin) {
-        pin = outfitClue;
-        outfitClue = '';
-      }
-      if (!outfitClue) {
-        const matchStarter = STARTER_KIDS_WITH_OUTFIT_CLUES.find(function(s) { return s[2] === saint; });
-        outfitClue = matchStarter ? matchStarter[5] : ('Traditional saint vestments and patron symbol prop for ' + saint);
-      }
-      return [bib, kid, saint, cat, bioClue, outfitClue, pin || String(100 + Number(bib)).slice(-3)];
-    });
-    existingRange.setValues(updatedRows);
-  }
-
   rosterSheet.autoResizeColumns(1, ROSTER_HEADERS.length);
 
   let scoresSheet = ss.getSheetByName(TAB_SCORES);
@@ -337,6 +294,18 @@ function handleWriteAction(action, p) {
         status: 'success',
         action: 'saveAppConfig',
         config: savedCfg
+      });
+    }
+
+    // ACTION: CLEAR ALL SCORES
+    if (action === 'clearAllScores') {
+      if (scoresSheet.getLastRow() > 1) {
+        scoresSheet.getRange(2, 1, scoresSheet.getLastRow() - 1, 10).clearContent();
+      }
+      SpreadsheetApp.flush();
+      return createJsonResponse({
+        status: 'success',
+        action: 'clearAllScores'
       });
     }
 

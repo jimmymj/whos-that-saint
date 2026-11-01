@@ -24,3 +24,4 @@ A mobile-first, full-screen parish community web application for All Saints' Day
 - `Code.gs` — Google Apps Script backend for two-way Google Sheets sync
 - `Roster_Saints_Kids_Template.csv` — Master 100-Kid Input Table CSV template
 - `Quiz_Participants_Scores_Template.csv` — Participant Scores Output Table CSV template
+
