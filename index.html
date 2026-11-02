@@ -156,10 +156,27 @@
     <!-- GLOBAL NOTIFICATION BANNER -->
     <div id="globalToast" class="hidden w-full rounded-xl p-2.5 text-sm font-bold text-center shadow-md transition-all"></div>
 
+    <!-- ACTIVE GAME 1-MINUTE WARNING BANNER (SHOWN WHEN EVENT CLOSING IN <= 60 SECONDS) -->
+    <div id="activeGameEndingWarningBanner" class="hidden sticky top-0 z-30 w-full rounded-xl p-2.5 bg-gradient-to-r from-red-600 via-amber-600 to-red-600 text-white border-2 border-amber-300 shadow-lg flex items-center justify-between gap-2 animate-pulse">
+      <div class="flex items-center gap-2 min-w-0">
+        <span class="text-xl shrink-0">⏳</span>
+        <div class="truncate">
+          <p class="text-xs font-black leading-tight text-white">⚠️ Event Ending in <span id="bannerWarningSecondsLeft" class="text-amber-200 underline font-black">60s</span>!</p>
+          <p class="text-[10px] text-amber-100 font-bold truncate">Submit now or answers will auto-submit when timer reaches 0</p>
+        </div>
+      </div>
+      <button type="button" onclick="finishAndSubmitScore()"
+        class="min-h-[38px] px-3 rounded-lg bg-amber-400 hover:bg-amber-300 text-royal-950 font-black text-xs shadow shrink-0 active:scale-[0.98]">
+        Submit Now
+      </button>
+    </div>
+
     <!-- ==========================================
          VIEW 1: FAST ONE-SCREEN REGISTRATION & ACTIVITY OPTIONS
          ========================================== -->
     <section id="viewRegistration" class="w-full space-y-2.5">
+      <!-- LIVE PARISH EVENT STATUS & COUNTDOWN BANNER -->
+      <div id="participantEventBanner" class="w-full rounded-xl p-2.5 shadow-md flex items-center justify-between gap-2 border-2 transition-all"></div>
       <!-- Competition / Activity Info Banner (Warm Fall Theme + Holy Saint Halo & Cross Symbol) -->
       <div class="w-full rounded-xl p-3.5 bg-gradient-to-br from-royal-900 via-royal-800 to-amber-900 text-white border-2 border-amber-400 shadow-md space-y-1.5">
         <div class="flex items-center justify-between gap-2">
@@ -455,6 +472,63 @@
 
       <!-- ADMIN TAB 1: CLOUD & CSV DATA MANAGER -->
       <div id="adminTabPanel1" class="w-full rounded-xl p-3 bg-white border-2 border-slate-300 space-y-3">
+        <!-- ADMIN CONTROLS: START / STOP EVENT & LIVE COUNTDOWN TIMER (SYNCED TO CLOUD) -->
+        <div class="w-full rounded-xl p-3.5 bg-gradient-to-br from-royal-950 via-royal-900 to-royal-800 text-white border-2 border-amber-400 shadow-md space-y-3">
+          <div class="flex items-center justify-between gap-2 border-b border-amber-400/30 pb-2">
+            <div>
+              <h3 class="text-sm sm:text-base font-black text-amber-300 flex items-center gap-1.5">
+                <span>⏱</span> <span>Parish Event Live Controls</span>
+              </h3>
+              <p class="text-xs text-amber-100 font-medium">Start or stop the activity and set the event closing time for all participants:</p>
+            </div>
+            <span id="adminEventStatusPill" class="px-2.5 py-1 rounded-full text-xs font-black shrink-0 bg-emerald-500 text-royal-950">
+              🟢 Running
+            </span>
+          </div>
+
+          <!-- Start / Stop Action Buttons -->
+          <div class="grid grid-cols-2 gap-2">
+            <button type="button" id="btnAdminStartEvent" onclick="adminSetEventRunning(true)"
+              class="min-h-[46px] rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs sm:text-sm shadow flex items-center justify-center gap-1.5 active:scale-[0.98]">
+              <span>▶</span> <span>Start Event</span>
+            </button>
+            <button type="button" id="btnAdminStopEvent" onclick="adminSetEventRunning(false)"
+              class="min-h-[46px] rounded-xl bg-red-700 hover:bg-red-800 text-white font-black text-xs sm:text-sm shadow flex items-center justify-center gap-1.5 active:scale-[0.98]">
+              <span>⏹</span> <span>Stop Event</span>
+            </button>
+          </div>
+
+          <!-- End Time & Duration Controls -->
+          <div class="bg-royal-950/70 rounded-xl p-2.5 border border-amber-400/40 space-y-2">
+            <div class="flex items-center justify-between gap-2">
+              <span class="text-xs font-extrabold text-amber-200">Event End Time:</span>
+              <span id="adminLiveTimerText" class="text-xs font-mono font-black text-amber-300">No End Time Set</span>
+            </div>
+
+            <!-- Quick duration presets -->
+            <div class="grid grid-cols-4 gap-1.5 text-xs font-extrabold">
+              <button type="button" onclick="adminSetQuickDuration(15)" class="py-1.5 rounded-lg bg-amber-400/20 hover:bg-amber-400/30 text-amber-200 border border-amber-400/40 text-center active:scale-[0.97]">+15 min</button>
+              <button type="button" onclick="adminSetQuickDuration(30)" class="py-1.5 rounded-lg bg-amber-400/20 hover:bg-amber-400/30 text-amber-200 border border-amber-400/40 text-center active:scale-[0.97]">+30 min</button>
+              <button type="button" onclick="adminSetQuickDuration(45)" class="py-1.5 rounded-lg bg-amber-400/20 hover:bg-amber-400/30 text-amber-200 border border-amber-400/40 text-center active:scale-[0.97]">+45 min</button>
+              <button type="button" onclick="adminSetQuickDuration(60)" class="py-1.5 rounded-lg bg-amber-400/20 hover:bg-amber-400/30 text-amber-200 border border-amber-400/40 text-center active:scale-[0.97]">+60 min</button>
+            </div>
+
+            <!-- Custom Clock Time Picker & Clear Button -->
+            <div class="flex items-center gap-2 pt-0.5">
+              <input id="inputAdminEndTimePicker" type="time"
+                class="flex-1 min-h-[40px] px-2.5 rounded-lg bg-white text-royal-950 font-mono font-bold text-xs border border-amber-300" />
+              <button type="button" onclick="adminApplyClockEndTime()"
+                class="min-h-[40px] px-3 rounded-lg bg-amber-400 hover:bg-amber-300 text-royal-950 font-black text-xs active:scale-[0.98]">
+                Set Clock Time
+              </button>
+              <button type="button" onclick="adminClearEndTime()"
+                class="min-h-[40px] px-2.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold text-xs active:scale-[0.98]">
+                Clear Time
+              </button>
+            </div>
+          </div>
+          <p id="adminEventSyncStatusText" class="text-[11px] font-bold text-amber-300/80"></p>
+        </div>
         <!-- ADMIN CONTROLS: ENABLE / DISABLE SAINTS FIND OPTIONS (SYNCED TO CLOUD SHEET) -->
         <div class="w-full rounded-xl p-3 bg-amber-50/90 border-2 border-amber-400 space-y-2">
           <div class="flex items-center justify-between gap-2">
@@ -762,6 +836,34 @@
     </div>
   </div>
 
+  <!-- 1-MINUTE REMAINING WARNING MODAL (AUTO-SUBMITS ON 0s) -->
+  <div id="modalOneMinuteWarning" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3">
+    <div class="w-full max-w-sm rounded-2xl bg-white p-4 border-4 border-amber-500 shadow-2xl space-y-3 text-center">
+      <div class="w-14 h-14 mx-auto rounded-full bg-amber-100 border-2 border-amber-400 flex items-center justify-center text-3xl shadow-inner animate-bounce">
+        ⏳
+      </div>
+      <div class="space-y-1">
+        <h3 id="modalWarningTitle" class="text-lg font-black text-royal-950">⚠️ 1 Minute Remaining!</h3>
+        <p id="modalWarningMessage" class="text-xs font-bold text-slate-700 leading-relaxed">
+          The Parish Event is ending soon. Please finish and submit your recorded matches now.
+        </p>
+      </div>
+      <div class="p-2.5 rounded-xl bg-amber-50 border border-amber-300 text-xs font-black text-royal-950">
+        Auto-Submitting in: <span id="modalWarningCountdownSeconds" class="text-lg text-red-600 font-black">60s</span>
+      </div>
+      <div class="grid grid-cols-1 gap-2 pt-1">
+        <button type="button" onclick="finishAndSubmitScore()"
+          class="w-full min-h-[50px] rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm shadow-md active:scale-[0.99] flex items-center justify-center gap-1.5">
+          <span>✓</span> <span>Submit My Score Now</span>
+        </button>
+        <button type="button" onclick="dismissOneMinuteWarningModal()"
+          class="w-full min-h-[44px] rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold text-xs active:scale-[0.99]">
+          Keep Playing (<span id="modalDismissSeconds">60s</span> left)
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- ADMIN PIN MODAL (PRODUCTION READY — NO PIN SHOWN ON SCREEN) -->
   <div id="modalAdminPin" class="hidden fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-2">
     <div class="w-full max-w-sm rounded-xl bg-white p-3.5 border-2 border-amber-400 shadow-2xl space-y-3">
@@ -803,12 +905,12 @@
      * 1. STORAGE KEYS & APPLICATION STATE (GOOGLE SHEET ONLY — NO SAMPLE DATA)
      **************************************************************/
     const STORAGE_KEYS = {
-      SETTINGS: 'whos_that_saint_settings_v5',
-      ROSTER: 'whos_that_saint_roster_v5',
-      SUBMISSIONS: 'whos_that_saint_submissions_v4'
+      SETTINGS: 'whos_that_saint_settings_v6',
+      ROSTER: 'whos_that_saint_roster_v6',
+      SUBMISSIONS: 'whos_that_saint_submissions_v5'
     };
 
-    // Official 47 Parish Kids & Saints (Loaded instantly from Documents/SaintList.csv)
+    // Official 71 Parish Kids & Saints (Loaded instantly from Documents/SaintList.csv)
     const DEFAULT_ROSTER = [
   {
     "Bib_Number": 1,
@@ -1498,7 +1600,9 @@
         option1_KidToSaint: true,
         option2_SaintToKid: true,
         requireSecretPin: false,
-        adminPin: '1101'
+        adminPin: '1101',
+        eventStatus: 'RUNNING', // 'RUNNING' or 'STOPPED'
+        eventEndTime: 0         // epoch timestamp ms, 0 = no limit
       },
       session: {
         active: false,
@@ -1658,18 +1762,23 @@
       loadPersistedState();
       updateSettingsUI();
       renderActivityOptionsUI();
+      renderEventStatusAndTimerUI();
       renderHeaderStatus();
       switchView('registration');
       setupAutoFullscreenListeners();
       refreshCloudData(false);
 
-      // Real-time Cross-Device Multi-User Sync: Silently poll Google Sheet every 12 seconds
-      // so all participant devices stay in sync with live scores and rankings
+      // Real-time Cross-Device Multi-User Sync: Silently poll Google Sheet every 10 seconds
+      // so all participant devices stay in sync with live scores, event status, and stop signals
       setInterval(() => {
-        if (!appState.session.active) {
-          refreshCloudData(false);
-        }
-      }, 12000);
+        refreshCloudData(false);
+      }, 10000);
+
+      // 1-second live event timer tick for countdown display & 1-minute auto-submit watcher
+      setInterval(() => {
+        renderLiveCountdownTimer();
+        checkActiveSessionEventDeadline();
+      }, 1000);
     });
 
     function loadPersistedState() {
@@ -1677,11 +1786,14 @@
         localStorage.removeItem('whos_that_saint_roster_v2');
         localStorage.removeItem('whos_that_saint_roster_v3');
         localStorage.removeItem('whos_that_saint_roster_v4');
+        localStorage.removeItem('whos_that_saint_roster_v5');
         localStorage.removeItem('whos_that_saint_roster');
         localStorage.removeItem('whos_that_saint_submissions');
+        localStorage.removeItem('whos_that_saint_submissions_v4');
         localStorage.removeItem('whos_that_saint_settings_v2');
         localStorage.removeItem('whos_that_saint_settings_v3');
         localStorage.removeItem('whos_that_saint_settings_v4');
+        localStorage.removeItem('whos_that_saint_settings_v5');
 
         const savedSettings = localStorage.getItem(STORAGE_KEYS.SETTINGS);
         if (savedSettings) {
@@ -1690,7 +1802,9 @@
             ...appState.settings,
             ...parsed,
             option1_KidToSaint: parsed.option1_KidToSaint !== undefined ? Boolean(parsed.option1_KidToSaint) : true,
-            option2_SaintToKid: parsed.option2_SaintToKid !== undefined ? Boolean(parsed.option2_SaintToKid) : true
+            option2_SaintToKid: parsed.option2_SaintToKid !== undefined ? Boolean(parsed.option2_SaintToKid) : true,
+            eventStatus: parsed.eventStatus === 'STOPPED' ? 'STOPPED' : 'RUNNING',
+            eventEndTime: Number(parsed.eventEndTime) || 0
           };
         }
 
@@ -1714,12 +1828,12 @@
           appState.settings.webhookUrl = getActiveCloudUrl();
         }
 
-        // Load persisted roster or fall back immediately to official 47-kid SaintList
+        // Load persisted roster or fall back immediately to official 71-kid SaintList
         const savedRoster = localStorage.getItem(STORAGE_KEYS.ROSTER);
         if (savedRoster) {
           try {
             const parsedRoster = JSON.parse(savedRoster);
-            if (Array.isArray(parsedRoster) && parsedRoster.length > 0) {
+            if (Array.isArray(parsedRoster) && parsedRoster.length >= DEFAULT_ROSTER.length) {
               appState.roster = parsedRoster;
             } else {
               appState.roster = JSON.parse(JSON.stringify(DEFAULT_ROSTER));
@@ -1895,12 +2009,22 @@
       const view = appState.currentView;
 
       if (view === 'registration') {
-        container.innerHTML = `
-          <button type="button" onclick="startActivityFromRegistration()"
-            class="w-full min-h-[50px] rounded-xl bg-gradient-to-r from-royal-950 via-royal-900 to-royal-800 text-amber-300 border border-amber-400/50 font-black text-base shadow-md active:scale-[0.99]">
-            ✞ Start Saints Find Activity →
-          </button>
-        `;
+        const isOpen = isEventCurrentlyOpen();
+        if (isOpen) {
+          container.innerHTML = `
+            <button type="button" onclick="startActivityFromRegistration()"
+              class="w-full min-h-[50px] rounded-xl bg-gradient-to-r from-royal-950 via-royal-900 to-royal-800 text-amber-300 border border-amber-400/50 font-black text-base shadow-md active:scale-[0.99]">
+              ✞ Start Saints Find Activity →
+            </button>
+          `;
+        } else {
+          container.innerHTML = `
+            <button type="button" onclick="showLeaderboardView()"
+              class="w-full min-h-[50px] rounded-xl bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-amber-300 border border-amber-400/50 font-black text-sm shadow-md active:scale-[0.99] flex items-center justify-center gap-2">
+              <span>🔴</span> <span>Event Closed — View Leaderboard &amp; Winners</span>
+            </button>
+          `;
+        }
       } else if (view === 'bibExplorer') {
         const count = appState.session.totalAttempted;
         container.innerHTML = `
@@ -2071,6 +2195,11 @@
     }
 
     function startActivityFromRegistration() {
+      if (!isEventCurrentlyOpen()) {
+        showToast("The parish activity is currently closed. View Leaderboard for results!", "error");
+        showLeaderboardView();
+        return;
+      }
       requestMobileFullScreen();
 
       if (appState.roster.length === 0) {
@@ -2132,8 +2261,12 @@
         correctMatches: 0,
         totalAttempted: 0,
         currentQuestion: null,
-        bibRangeFilter: 'ALL'
+        bibRangeFilter: 'ALL',
+        isAutoSubmitting: false,
+        graceEndTime: null
       };
+
+      hasShownOneMinuteWarningModal = false;
 
       appState.session.timerInterval = setInterval(() => {
         if (appState.session.active) {
@@ -2459,27 +2592,40 @@
         pinBox.classList.add('hidden');
       }
 
-      // Neutral Selection Recorded Banner — NEVER reveals the correct answer!
+      // Selection Feedback Banner
       const feedbackBanner = document.getElementById('answerFeedbackBanner');
       if (answered && existingAnswer) {
         feedbackBanner.classList.remove('hidden');
-        feedbackBanner.className = "w-full rounded-xl p-2.5 text-sm font-extrabold text-center bg-royal-900 text-amber-300 border border-amber-400 shadow-sm";
-        feedbackBanner.textContent = `✓ Your selection ("${existingAnswer.chosen}") is locked in for Bib #${kid.Bib_Number}.`;
+        if (existingAnswer.correct) {
+          feedbackBanner.className = "w-full rounded-xl p-3 text-sm sm:text-base font-black text-center bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 text-white border-2 border-emerald-300 shadow-md";
+          feedbackBanner.innerHTML = `🎉 Wonderful! Correct Match! (+${existingAnswer.pointsEarned} pts) ⭐`;
+        } else {
+          feedbackBanner.className = "w-full rounded-xl p-2.5 text-xs sm:text-sm font-bold text-center bg-royal-900 text-amber-300 border border-amber-400 shadow-sm";
+          feedbackBanner.innerHTML = `✓ Selection recorded for Bib #${kid.Bib_Number}. Keep going!`;
+        }
       } else {
         feedbackBanner.classList.add('hidden');
       }
 
-      // Render 4 full-width buttons (neutral highlight for selected option, never showing right/wrong)
+      // Render 4 full-width buttons
       const optionsContainer = document.getElementById('optionsContainer');
       optionsContainer.innerHTML = options.map((opt, idx) => {
-        const letter = ['A', 'B', 'C', 'D'][idx];
+        const isChosen = answered && existingAnswer && existingAnswer.chosen === opt;
         let btnStyle = "bg-slate-50 hover:bg-amber-50 border-2 border-slate-300 text-slate-900";
+        let badgeStyle = "bg-royal-900 text-amber-300";
+        let letter = ['A', 'B', 'C', 'D'][idx];
 
         if (answered) {
-          if (existingAnswer && existingAnswer.chosen === opt) {
-            btnStyle = "bg-royal-900 border-2 border-amber-400 text-amber-300";
+          if (isChosen) {
+            if (existingAnswer.correct) {
+              btnStyle = "bg-emerald-600 border-2 border-emerald-400 text-white shadow-md scale-[1.01]";
+              badgeStyle = "bg-emerald-800 text-white";
+              letter = "✓";
+            } else {
+              btnStyle = "bg-royal-900 border-2 border-amber-400 text-amber-300";
+            }
           } else {
-            btnStyle = "bg-slate-100 border-2 border-slate-200 text-slate-400 opacity-75";
+            btnStyle = "bg-slate-100 border-2 border-slate-200 text-slate-400 opacity-70";
           }
         }
 
@@ -2488,7 +2634,7 @@
           <button type="button" ${answered ? 'disabled' : ''}
             onclick="submitMultipleChoiceAnswer('${safeOpt}')"
             class="w-full min-h-[54px] rounded-xl p-3 text-left font-extrabold text-base sm:text-lg flex items-center gap-2.5 shadow-sm active:scale-[0.99] transition ${btnStyle}">
-            <span class="w-7 h-7 rounded-lg bg-royal-900 text-amber-300 font-black text-xs flex items-center justify-center shrink-0">${letter}</span>
+            <span class="w-7 h-7 rounded-lg ${badgeStyle} font-black text-xs flex items-center justify-center shrink-0">${letter}</span>
             <span class="leading-snug">${escapeHtml(opt)}</span>
           </button>
         `;
@@ -2539,18 +2685,31 @@
       renderQuestionCard();
       renderStickyBottomBar();
 
-      // Neutral feedback ONLY — do NOT show if it was right or wrong!
+      // Show encouraging animated banner for correct match or friendly confirmation
       const feedbackBanner = document.getElementById('answerFeedbackBanner');
       if (feedbackBanner) {
         feedbackBanner.classList.remove('hidden');
-        feedbackBanner.className = "w-full rounded-xl p-2.5 text-sm sm:text-base font-black text-center bg-royal-900 text-amber-300 border border-amber-400 shadow-md";
-        feedbackBanner.textContent = `✓ Selection Recorded for Bib #${q.kid.Bib_Number}!`;
+        if (isCorrect) {
+          const praises = [
+            `🎉 Wonderful! Correct Match! (+${pointsEarned} pts) ⭐`,
+            `⭐ Great job! That's the right Saint! (+${pointsEarned} pts) ✨`,
+            `✨ Excellent match! You found the Saint! (+${pointsEarned} pts) ✞`,
+            `✝️ Beautiful! Well done! (+${pointsEarned} pts) 🌟`
+          ];
+          const praise = praises[Math.floor(Math.random() * praises.length)];
+          feedbackBanner.className = "w-full rounded-xl p-3 text-sm sm:text-base font-black text-center bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 text-white border-2 border-emerald-300 shadow-lg animate-bounce";
+          feedbackBanner.innerHTML = praise;
+        } else {
+          feedbackBanner.className = "w-full rounded-xl p-2.5 text-xs sm:text-sm font-bold text-center bg-royal-900 text-amber-300 border border-amber-400 shadow-md";
+          feedbackBanner.innerHTML = `✓ Selection recorded for Bib #${q.kid.Bib_Number}! Keep exploring!`;
+        }
       }
 
+      // Automatically advance to next unanswered question while user enjoys encouragement
       setTimeout(() => {
         if (appState.currentView !== 'questionCard') return;
-        switchView('bibExplorer');
-      }, 900);
+        openNextUnansweredBib();
+      }, 1100);
     }
 
     function openNextUnansweredBib() {
@@ -2587,10 +2746,17 @@
         return;
       }
 
+      // Dismiss 1-minute warning modal & banner
+      dismissOneMinuteWarningModal();
+      const warningBanner = document.getElementById('activeGameEndingWarningBanner');
+      if (warningBanner) warningBanner.classList.add('hidden');
+      hasShownOneMinuteWarningModal = false;
+
       if (appState.session.timerInterval) {
         clearInterval(appState.session.timerInterval);
       }
       appState.session.active = false;
+      appState.session.isAutoSubmitting = false;
 
       const timeTaken = Math.max(1, Math.floor((Date.now() - appState.session.startTimeMs) / 1000));
       const accuracy = Number(((appState.session.correctMatches / appState.session.totalAttempted) * 100).toFixed(1));
@@ -3181,7 +3347,9 @@
       const res = await sendCloudWriteRequest('saveAppConfig', {
         option1_KidToSaint: appState.settings.option1_KidToSaint !== false,
         option2_SaintToKid: appState.settings.option2_SaintToKid !== false,
-        requireSecretPin: Boolean(appState.settings.requireSecretPin)
+        requireSecretPin: Boolean(appState.settings.requireSecretPin),
+        eventStatus: appState.settings.eventStatus || 'RUNNING',
+        eventEndTime: Number(appState.settings.eventEndTime) || 0
       });
 
       if (res.ok) {
@@ -3202,6 +3370,324 @@
       saveAdminSettings();
       showToast(`Talk-to-the-Saint PIN mode ${appState.settings.requireSecretPin ? 'ENABLED' : 'DISABLED'}.`, "info");
       await saveAdminAppConfigToCloud();
+    }
+
+    /**************************************************************
+     * EVENT START / STOP & LIVE COUNTDOWN TIMER CONTROLS
+     **************************************************************/
+    function isEventCurrentlyOpen() {
+      if (appState.settings.eventStatus === 'STOPPED') return false;
+      if (appState.settings.eventEndTime && appState.settings.eventEndTime > 0) {
+        if (Date.now() >= appState.settings.eventEndTime) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    function formatRemainingTime(ms) {
+      if (ms <= 0) return '0m 00s';
+      const totalSec = Math.floor(ms / 1000);
+      const hours = Math.floor(totalSec / 3600);
+      const mins = Math.floor((totalSec % 3600) / 60);
+      const secs = totalSec % 60;
+      if (hours > 0) {
+        return `${hours}h ${mins < 10 ? '0' : ''}${mins}m ${secs < 10 ? '0' : ''}${secs}s`;
+      }
+      return `${mins}m ${secs < 10 ? '0' : ''}${secs}s`;
+    }
+
+    function formatClockTime(timestamp) {
+      if (!timestamp) return '';
+      const d = new Date(timestamp);
+      return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    }
+
+    function renderEventStatusAndTimerUI() {
+      const isOpen = isEventCurrentlyOpen();
+      const status = appState.settings.eventStatus || 'RUNNING';
+      const endTime = Number(appState.settings.eventEndTime) || 0;
+      const now = Date.now();
+      const remainingMs = endTime > 0 ? (endTime - now) : null;
+
+      // 1. Participant Registration Banner
+      const bannerEl = document.getElementById('participantEventBanner');
+      if (bannerEl) {
+        if (!isOpen) {
+          bannerEl.className = "w-full rounded-xl p-3 bg-gradient-to-r from-red-950 via-red-900 to-red-800 border-2 border-red-500 text-white flex flex-col items-center text-center space-y-1 shadow-md transition-all";
+          bannerEl.innerHTML = `
+            <div class="flex items-center gap-1.5 font-black text-sm text-red-200">
+              <span class="w-2.5 h-2.5 rounded-full bg-red-400"></span>
+              <span>Event is Closed</span>
+            </div>
+            <p class="text-xs text-red-100 font-medium leading-tight">The All Saints' Day parish activity is currently closed. Thank you for participating!</p>
+            <button type="button" onclick="showLeaderboardView()" class="mt-1 px-3 py-1.5 rounded-lg bg-amber-400 hover:bg-amber-300 text-royal-950 font-black text-xs shadow active:scale-[0.98]">
+              🏆 View Leaderboard &amp; Winners
+            </button>
+          `;
+        } else {
+          bannerEl.className = "w-full rounded-xl p-2.5 bg-gradient-to-r from-emerald-950 via-emerald-900 to-emerald-800 border-2 border-emerald-400 text-white flex items-center justify-between gap-2 shadow-sm transition-all";
+          let timerHtml = '';
+          if (endTime > 0 && remainingMs !== null && remainingMs > 0) {
+            timerHtml = `<span id="participantRemainingTimerBadge" class="bg-amber-400 text-royal-950 font-black text-xs px-2.5 py-0.5 rounded-full shadow-sm shrink-0">⏳ ${formatRemainingTime(remainingMs)} Left</span>`;
+          } else {
+            timerHtml = `<span class="bg-emerald-400/20 text-emerald-200 border border-emerald-400/40 font-black text-[11px] px-2 py-0.5 rounded-full shrink-0">Open Session</span>`;
+          }
+          bannerEl.innerHTML = `
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shrink-0"></span>
+              <span class="font-extrabold text-xs sm:text-sm text-emerald-100 truncate">Event is Running Now!</span>
+            </div>
+            ${timerHtml}
+          `;
+        }
+      }
+
+      // 2. Admin View Controls
+      const adminPill = document.getElementById('adminEventStatusPill');
+      if (adminPill) {
+        if (!isOpen) {
+          adminPill.textContent = "🔴 Closed / Stopped";
+          adminPill.className = "px-2.5 py-1 rounded-full text-xs font-black shrink-0 bg-red-600 text-white";
+        } else {
+          adminPill.textContent = "🟢 Running / Live";
+          adminPill.className = "px-2.5 py-1 rounded-full text-xs font-black shrink-0 bg-emerald-500 text-royal-950";
+        }
+      }
+
+      const adminTimerEl = document.getElementById('adminLiveTimerText');
+      if (adminTimerEl) {
+        if (!isOpen && status === 'STOPPED') {
+          adminTimerEl.textContent = "Event Manually Stopped";
+        } else if (endTime > 0) {
+          const clockStr = formatClockTime(endTime);
+          if (remainingMs !== null && remainingMs > 0) {
+            adminTimerEl.textContent = `Closes at ${clockStr} (${formatRemainingTime(remainingMs)} left)`;
+          } else {
+            adminTimerEl.textContent = `Time Expired at ${clockStr} (Closed)`;
+          }
+        } else {
+          adminTimerEl.textContent = "No End Time (Open Running)";
+        }
+      }
+
+      // 3. Update sticky bottom bar
+      renderStickyBottomBar();
+    }
+
+    let hasShownOneMinuteWarningModal = false;
+
+    function dismissOneMinuteWarningModal() {
+      const modal = document.getElementById('modalOneMinuteWarning');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    async function autoSubmitAndEndSession(reason = "Time Expired") {
+      if (!appState.session || !appState.session.active) return;
+      if (appState.session.isAutoSubmitting) return;
+      appState.session.isAutoSubmitting = true;
+
+      dismissOneMinuteWarningModal();
+      const banner = document.getElementById('activeGameEndingWarningBanner');
+      if (banner) banner.classList.add('hidden');
+
+      if (appState.session.totalAttempted > 0) {
+        showToast(`⏰ ${reason}! Automatically submitting your ${appState.session.totalAttempted} recorded match(es)...`, "info");
+        await finishAndSubmitScore();
+      } else {
+        if (appState.session.timerInterval) {
+          clearInterval(appState.session.timerInterval);
+        }
+        appState.session.active = false;
+        showToast(`⏰ ${reason}! Activity ended with no matches recorded. Viewing live leaderboard.`, "info");
+        switchView('results');
+      }
+    }
+
+    function checkActiveSessionEventDeadline() {
+      if (!appState.session || !appState.session.active) {
+        const banner = document.getElementById('activeGameEndingWarningBanner');
+        if (banner) banner.classList.add('hidden');
+        dismissOneMinuteWarningModal();
+        hasShownOneMinuteWarningModal = false;
+        return;
+      }
+
+      const now = Date.now();
+      let deadline = 0;
+
+      if (appState.settings.eventStatus === 'STOPPED') {
+        if (!appState.session.graceEndTime) {
+          // If Admin stopped event, grant 60s auto-submit grace deadline
+          appState.session.graceEndTime = (appState.settings.eventEndTime > now)
+            ? appState.settings.eventEndTime
+            : (now + 60000);
+        }
+        deadline = appState.session.graceEndTime;
+      } else if (appState.settings.eventEndTime > 0) {
+        deadline = Number(appState.settings.eventEndTime);
+      }
+
+      if (deadline > 0) {
+        const remainingMs = deadline - now;
+
+        if (remainingMs <= 60000 && remainingMs > 0) {
+          const secs = Math.max(1, Math.ceil(remainingMs / 1000));
+
+          // 1. Show persistent warning banner on top of game views
+          const banner = document.getElementById('activeGameEndingWarningBanner');
+          const secsEl = document.getElementById('bannerWarningSecondsLeft');
+          if (banner) banner.classList.remove('hidden');
+          if (secsEl) secsEl.textContent = `${secs}s`;
+
+          // 2. Show 1-minute warning modal once upon entering final 60 seconds
+          if (!hasShownOneMinuteWarningModal) {
+            hasShownOneMinuteWarningModal = true;
+            const modal = document.getElementById('modalOneMinuteWarning');
+            const modalSecs = document.getElementById('modalWarningCountdownSeconds');
+            const dismissSecs = document.getElementById('modalDismissSeconds');
+            if (modal) modal.classList.remove('hidden');
+            if (modalSecs) modalSecs.textContent = `${secs}s`;
+            if (dismissSecs) dismissSecs.textContent = `${secs}s`;
+            showToast("⚠️ 1 MINUTE REMAINING: Submit answers now or they will auto-submit!", "error");
+          } else {
+            const modalSecs = document.getElementById('modalWarningCountdownSeconds');
+            const dismissSecs = document.getElementById('modalDismissSeconds');
+            if (modalSecs) modalSecs.textContent = `${secs}s`;
+            if (dismissSecs) dismissSecs.textContent = `${secs}s`;
+          }
+        } else if (remainingMs <= 0) {
+          const banner = document.getElementById('activeGameEndingWarningBanner');
+          if (banner) banner.classList.add('hidden');
+          dismissOneMinuteWarningModal();
+          autoSubmitAndEndSession(appState.settings.eventStatus === 'STOPPED' ? "Event Closed by Admin" : "Time Expired");
+        } else {
+          // More than 60s remaining
+          const banner = document.getElementById('activeGameEndingWarningBanner');
+          if (banner) banner.classList.add('hidden');
+          dismissOneMinuteWarningModal();
+          hasShownOneMinuteWarningModal = false;
+        }
+      } else {
+        const banner = document.getElementById('activeGameEndingWarningBanner');
+        if (banner) banner.classList.add('hidden');
+        dismissOneMinuteWarningModal();
+        hasShownOneMinuteWarningModal = false;
+      }
+    }
+
+    function renderLiveCountdownTimer() {
+      if (appState.settings.eventEndTime > 0 || appState.settings.eventStatus) {
+        const timerBadge = document.getElementById('participantRemainingTimerBadge');
+        const adminTimerEl = document.getElementById('adminLiveTimerText');
+        const endTime = Number(appState.settings.eventEndTime) || 0;
+        const isOpen = isEventCurrentlyOpen();
+        const now = Date.now();
+        const remainingMs = endTime - now;
+
+        if (timerBadge && endTime > 0) {
+          if (remainingMs > 0 && isOpen) {
+            timerBadge.textContent = `⏳ ${formatRemainingTime(remainingMs)} Left`;
+          } else {
+            renderEventStatusAndTimerUI();
+          }
+        }
+
+        if (adminTimerEl && endTime > 0) {
+          const clockStr = formatClockTime(endTime);
+          if (remainingMs > 0 && isOpen) {
+            adminTimerEl.textContent = `Closes at ${clockStr} (${formatRemainingTime(remainingMs)} left)`;
+          } else {
+            adminTimerEl.textContent = `Time Expired at ${clockStr} (Closed)`;
+          }
+        }
+      }
+    }
+
+    function adminSetQuickDuration(minutes) {
+      const endTime = Date.now() + (minutes * 60 * 1000);
+      appState.settings.eventStatus = 'RUNNING';
+      appState.settings.eventEndTime = endTime;
+
+      const picker = document.getElementById('inputAdminEndTimePicker');
+      if (picker) {
+        const d = new Date(endTime);
+        const hh = String(d.getHours()).padStart(2, '0');
+        const mm = String(d.getMinutes()).padStart(2, '0');
+        picker.value = `${hh}:${mm}`;
+      }
+
+      saveAdminEventStatusAndCloud(true);
+      showToast(`Event started: ${minutes} min countdown active!`, "success");
+    }
+
+    function adminApplyClockEndTime() {
+      const picker = document.getElementById('inputAdminEndTimePicker');
+      if (!picker || !picker.value) {
+        showToast("Please choose a time on the clock first!", "error");
+        return;
+      }
+      const [hours, minutes] = picker.value.split(':').map(Number);
+      const target = new Date();
+      target.setHours(hours, minutes, 0, 0);
+
+      if (target.getTime() <= Date.now()) {
+        target.setDate(target.getDate() + 1);
+      }
+
+      appState.settings.eventStatus = 'RUNNING';
+      appState.settings.eventEndTime = target.getTime();
+      saveAdminEventStatusAndCloud(true);
+      showToast(`Event set to close at ${formatClockTime(target.getTime())}!`, "success");
+    }
+
+    function adminClearEndTime() {
+      appState.settings.eventEndTime = 0;
+      const picker = document.getElementById('inputAdminEndTimePicker');
+      if (picker) picker.value = '';
+      saveAdminEventStatusAndCloud(true);
+      showToast("Cleared event end time (Open session).", "info");
+    }
+
+    function adminSetEventRunning(isRunning) {
+      if (!isRunning) {
+        // When Admin manually stops event, set STOPPED status and broadcast 60s countdown for active participants to auto-submit
+        appState.settings.eventStatus = 'STOPPED';
+        appState.settings.eventEndTime = Date.now() + 60000;
+        showToast("Event Stopped: 1-minute auto-submit grace period broadcasted to active players.", "info");
+      } else {
+        appState.settings.eventStatus = 'RUNNING';
+        appState.settings.eventEndTime = 0;
+        const picker = document.getElementById('inputAdminEndTimePicker');
+        if (picker) picker.value = '';
+        showToast("Event Started & Live!", "success");
+      }
+      saveAdminEventStatusAndCloud(true);
+    }
+
+    async function saveAdminEventStatusAndCloud(pushToCloud = true) {
+      localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(appState.settings));
+      updateSettingsUI();
+      renderEventStatusAndTimerUI();
+
+      if (pushToCloud && getActiveCloudUrl()) {
+        const statusEl = document.getElementById('adminEventSyncStatusText');
+        if (statusEl) statusEl.textContent = "⏳ Syncing event status to Google Sheet...";
+
+        const res = await sendCloudWriteRequest('saveAppConfig', {
+          option1_KidToSaint: appState.settings.option1_KidToSaint !== false,
+          option2_SaintToKid: appState.settings.option2_SaintToKid !== false,
+          requireSecretPin: Boolean(appState.settings.requireSecretPin),
+          eventStatus: appState.settings.eventStatus || 'RUNNING',
+          eventEndTime: Number(appState.settings.eventEndTime) || 0
+        });
+
+        if (res && res.ok) {
+          if (statusEl) statusEl.textContent = "✓ Synced live event status to all devices!";
+        } else {
+          if (statusEl) statusEl.textContent = "✓ Saved locally (Cloud sync pending)";
+        }
+      }
     }
 
     async function testCloudConnection() {
@@ -3301,9 +3787,16 @@
             if (data.config.requireSecretPin !== undefined) {
               appState.settings.requireSecretPin = Boolean(data.config.requireSecretPin);
             }
+            if (data.config.eventStatus !== undefined) {
+              appState.settings.eventStatus = data.config.eventStatus === 'STOPPED' ? 'STOPPED' : 'RUNNING';
+            }
+            if (data.config.eventEndTime !== undefined) {
+              appState.settings.eventEndTime = Number(data.config.eventEndTime) || 0;
+            }
             localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(appState.settings));
             updateSettingsUI();
             renderActivityOptionsUI();
+            renderEventStatusAndTimerUI();
           }
 
           // 2. Apply Roster & Outfit Clues from Cloud Sheet (only when sheet has rows)
@@ -3335,11 +3828,15 @@
             ];
             saveSubmissionsToStorage();
           }
-          renderBibGrid();
-          renderLeaderboardAndAppreciation();
-          renderAdminRosterCrudList();
-          renderAdminScoresTable();
-          renderAdminPodiumAndTicker();
+          if (appState.session && appState.session.active) {
+            renderEventStatusAndTimerUI();
+          } else {
+            renderBibGrid();
+            renderLeaderboardAndAppreciation();
+            renderAdminRosterCrudList();
+            renderAdminScoresTable();
+            renderAdminPodiumAndTicker();
+          }
           if (notify) showToast("Synced latest Options, Roster & Scores from Cloud Sheet!", "success");
 
           // Auto-sync any pending local submissions in the background

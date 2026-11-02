@@ -56,7 +56,9 @@ function readAppConfigFromSheet(ss) {
   const defaultCfg = {
     option1_KidToSaint: true,
     option2_SaintToKid: true,
-    requireSecretPin: false
+    requireSecretPin: false,
+    eventStatus: 'RUNNING',
+    eventEndTime: 0
   };
   try {
     const props = PropertiesService.getScriptProperties();
@@ -66,18 +68,26 @@ function readAppConfigFromSheet(ss) {
       defaultCfg.option1_KidToSaint = parsed.option1_KidToSaint !== false;
       defaultCfg.option2_SaintToKid = parsed.option2_SaintToKid !== false;
       defaultCfg.requireSecretPin = Boolean(parsed.requireSecretPin);
+      if (parsed.eventStatus) defaultCfg.eventStatus = String(parsed.eventStatus).toUpperCase();
+      if (parsed.eventEndTime !== undefined) defaultCfg.eventEndTime = Number(parsed.eventEndTime) || 0;
     }
     const dashSheet = ss ? ss.getSheetByName(TAB_DASHBOARD) : null;
     if (dashSheet) {
-      const cfgValues = dashSheet.getRange('M3:N5').getValues();
-      if (cfgValues[0][0] === 'option1_KidToSaint' && cfgValues[0][1] !== '') {
+      const cfgValues = dashSheet.getRange('M3:N7').getValues();
+      if (cfgValues[0] && cfgValues[0][0] === 'option1_KidToSaint' && cfgValues[0][1] !== '') {
         defaultCfg.option1_KidToSaint = String(cfgValues[0][1]).toLowerCase() !== 'false';
       }
-      if (cfgValues[1][0] === 'option2_SaintToKid' && cfgValues[1][1] !== '') {
+      if (cfgValues[1] && cfgValues[1][0] === 'option2_SaintToKid' && cfgValues[1][1] !== '') {
         defaultCfg.option2_SaintToKid = String(cfgValues[1][1]).toLowerCase() !== 'false';
       }
-      if (cfgValues[2][0] === 'requireSecretPin' && cfgValues[2][1] !== '') {
+      if (cfgValues[2] && cfgValues[2][0] === 'requireSecretPin' && cfgValues[2][1] !== '') {
         defaultCfg.requireSecretPin = String(cfgValues[2][1]).toLowerCase() === 'true';
+      }
+      if (cfgValues[3] && cfgValues[3][0] === 'eventStatus' && cfgValues[3][1] !== '') {
+        defaultCfg.eventStatus = String(cfgValues[3][1]).toUpperCase();
+      }
+      if (cfgValues[4] && cfgValues[4][0] === 'eventEndTime' && cfgValues[4][1] !== '') {
+        defaultCfg.eventEndTime = Number(cfgValues[4][1]) || 0;
       }
     }
   } catch (e) {}
@@ -89,13 +99,15 @@ function readAppConfigFromSheet(ss) {
 }
 
 /**
- * Writes App Config to both Live_Leaderboard_And_Kid_Stats (M2:N5) and ScriptProperties
+ * Writes App Config to both Live_Leaderboard_And_Kid_Stats (M2:N7) and ScriptProperties
  */
 function writeAppConfigToSheet(ss, cfg) {
   const cleanCfg = {
     option1_KidToSaint: cfg.option1_KidToSaint !== false,
     option2_SaintToKid: cfg.option2_SaintToKid !== false,
-    requireSecretPin: Boolean(cfg.requireSecretPin)
+    requireSecretPin: Boolean(cfg.requireSecretPin),
+    eventStatus: cfg.eventStatus === 'STOPPED' ? 'STOPPED' : 'RUNNING',
+    eventEndTime: cfg.eventEndTime ? Number(cfg.eventEndTime) : 0
   };
   if (!cleanCfg.option1_KidToSaint && !cleanCfg.option2_SaintToKid) {
     cleanCfg.option1_KidToSaint = true;
@@ -108,10 +120,12 @@ function writeAppConfigToSheet(ss, cfg) {
   if (dashSheet) {
     dashSheet.getRange('M1').setValue('⚙ APP SETTINGS').setFontWeight('bold');
     dashSheet.getRange('M2:N2').setValues([['Setting_Key', 'Setting_Value']]).setFontWeight('bold').setBackground('#4a1c11').setFontColor('#fde68a');
-    dashSheet.getRange('M3:N5').setValues([
+    dashSheet.getRange('M3:N7').setValues([
       ['option1_KidToSaint', cleanCfg.option1_KidToSaint],
       ['option2_SaintToKid', cleanCfg.option2_SaintToKid],
-      ['requireSecretPin', cleanCfg.requireSecretPin]
+      ['requireSecretPin', cleanCfg.requireSecretPin],
+      ['eventStatus', cleanCfg.eventStatus],
+      ['eventEndTime', cleanCfg.eventEndTime]
     ]);
   }
   return cleanCfg;
