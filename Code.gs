@@ -314,6 +314,26 @@ function doGet(e) {
       }
     }
 
+    function sanitizeNotifEstTimestamp(notif) {
+      if (!notif) return notif;
+      const idMatch = String(notif.Notification_ID || '').match(/NOTIF-(\d{10,13})/i);
+      if (idMatch) {
+        const ep = Number(idMatch[1]);
+        if (ep > 1600000000000 && ep < 2500000000000) {
+          notif.Timestamp = formatEstDateForSheet(new Date(ep));
+        }
+      }
+      return notif;
+    }
+
+    if (latestNotification) {
+      latestNotification = sanitizeNotifEstTimestamp(latestNotification);
+      try {
+        PropertiesService.getScriptProperties().setProperty('LATEST_NOTIFICATION_JSON', JSON.stringify(latestNotification));
+      } catch (e) {}
+    }
+    allNotifications = allNotifications.map(sanitizeNotifEstTimestamp);
+
     return createJsonResponse({
       status: 'success',
       timestamp: formatEstDateForSheet(new Date()),
@@ -406,9 +426,21 @@ function handleWriteAction(action, p) {
     .map(function(s) { return parseInt(s.trim(), 10); })
     .filter(function(n) { return !isNaN(n) && n >= 1 && n <= 500; });
 
+  let subDate = new Date();
+  const subMatch = String(submissionId).match(/SUB-(\d{10,13})/i);
+  if (subMatch) {
+    const ep = Number(subMatch[1]);
+    if (ep > 1600000000000 && ep < 2500000000000) {
+      subDate = new Date(ep);
+    }
+  }
+  const scoreTimestamp = (typeof p.Timestamp === 'string' && p.Timestamp.includes('EST'))
+    ? sanitizeCellForSheet(p.Timestamp, 35)
+    : formatEstDateForSheet(subDate);
+
   const rowToAppend = [
     submissionId,
-    sanitizeCellForSheet(p.Timestamp || formatEstDateForSheet(new Date()), 35),
+    scoreTimestamp,
     cleanName,
     sanitizeCellForSheet(p.Family_or_Phone || '', 60),
     sanitizeCellForSheet(p.Game_Mode || 'Find Saint by Kid Name', 40),
@@ -484,7 +516,16 @@ function handleWriteAction(action, p) {
       }
 
       const notifId = sanitizeCellForSheet(p.Notification_ID || ('NOTIF-' + new Date().getTime() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase()), 50);
-      const timestamp = sanitizeCellForSheet(p.Timestamp || formatEstDateForSheet(new Date()), 35);
+
+      let notifDate = new Date();
+      const notifMatch = String(notifId).match(/NOTIF-(\d{10,13})/i);
+      if (notifMatch) {
+        const ep = Number(notifMatch[1]);
+        if (ep > 1600000000000 && ep < 2500000000000) {
+          notifDate = new Date(ep);
+        }
+      }
+      const timestamp = formatEstDateForSheet(notifDate);
       const message = sanitizeCellForSheet(p.Message || '', 500);
       const sender = sanitizeCellForSheet(p.Sender || 'Parish Admin', 60);
       const status = 'ACTIVE';

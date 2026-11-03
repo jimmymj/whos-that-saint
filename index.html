@@ -1749,39 +1749,83 @@
       }
     }
 
-    function formatEstTimestamp(ts) {
-      if (!ts) return '';
-      if (typeof ts === 'string' && ts.endsWith(' EST')) {
+    function formatEstTimestamp(ts, optionalId) {
+      if (!ts && !optionalId) return '';
+      let id = optionalId;
+      if (typeof ts === 'object' && ts !== null) {
+        id = ts.Notification_ID || ts.Submission_ID || optionalId || '';
+        ts = ts.Timestamp;
+      }
+
+      // 1. Highest fidelity: Extract true Unix epoch from NOTIF or SUB ID
+      if (id) {
+        const m = String(id).match(/(?:NOTIF|SUB)-(\d{10,13})/i);
+        if (m) {
+          const epoch = Number(m[1]);
+          if (epoch > 1600000000000 && epoch < 2500000000000) {
+            try {
+              const parts = new Intl.DateTimeFormat('en-US', {
+                timeZone: TIMEZONE_EST,
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+              }).formatToParts(new Date(epoch));
+              const mParts = {};
+              parts.forEach(p => mParts[p.type] = p.value);
+              return `${mParts.year}-${mParts.month}-${mParts.day} ${mParts.hour}:${mParts.minute}:${mParts.second} EST`;
+            } catch (e) {
+              return new Date(epoch).toLocaleString('en-US', { timeZone: TIMEZONE_EST }) + ' EST';
+            }
+          }
+        }
+      }
+
+      if (typeof ts === 'string' && ts.endsWith(' EST') && !ts.includes('NaN')) {
         return ts;
       }
+
       try {
         let d;
-        if (typeof ts === 'string') {
-          const s = ts.trim();
-          d = new Date(s);
-          if (isNaN(d.getTime())) {
-            d = new Date(s.replace(/-/g, '/'));
-          }
-        } else {
+        if (typeof ts === 'number') {
           d = new Date(ts);
+        } else if (typeof ts === 'string') {
+          const s = ts.trim();
+          if (s.endsWith('Z')) {
+            d = new Date(s);
+          } else if (/\bE[SD]T$/i.test(s)) {
+            const clean = s.replace(/\s*E[SD]T$/i, '').trim();
+            d = new Date(clean.replace(/-/g, '/') + ' EST');
+            if (isNaN(d.getTime())) d = new Date(clean);
+          } else {
+            d = new Date(s.replace(/-/g, '/'));
+            if (isNaN(d.getTime())) d = new Date(s);
+          }
+        } else if (ts instanceof Date) {
+          d = ts;
         }
-        if (isNaN(d.getTime())) return String(ts);
-        const parts = new Intl.DateTimeFormat('en-US', {
-          timeZone: TIMEZONE_EST,
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit',
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-          hour12: false
-        }).formatToParts(d);
-        const m = {};
-        parts.forEach(p => m[p.type] = p.value);
-        return `${m.year}-${m.month}-${m.day} ${m.hour}:${m.minute}:${m.second} EST`;
-      } catch (e) {
-        return String(ts);
-      }
+
+        if (d && !isNaN(d.getTime())) {
+          const parts = new Intl.DateTimeFormat('en-US', {
+            timeZone: TIMEZONE_EST,
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+          }).formatToParts(d);
+          const mParts = {};
+          parts.forEach(p => mParts[p.type] = p.value);
+          return `${mParts.year}-${mParts.month}-${mParts.day} ${mParts.hour}:${mParts.minute}:${mParts.second} EST`;
+        }
+      } catch (e) {}
+
+      return String(ts || '');
     }
 
     let appState = {
@@ -3988,28 +4032,62 @@
       } catch (e) {}
     }
 
-    function formatNotifTime(ts) {
-      if (!ts) return "Just now";
+    function formatNotifTime(notifOrTs, optionalId) {
+      if (!notifOrTs && !optionalId) return "Just now";
+
+      let ts = notifOrTs;
+      let id = optionalId || '';
+      if (typeof notifOrTs === 'object' && notifOrTs !== null) {
+        ts = notifOrTs.Timestamp;
+        id = notifOrTs.Notification_ID || optionalId || '';
+      }
+
+      // 1. Highest fidelity: Extract true Unix epoch from NOTIF-<timestamp> ID if present
+      if (id) {
+        const m = String(id).match(/NOTIF-(\d{10,13})/i);
+        if (m) {
+          const epoch = Number(m[1]);
+          if (epoch > 1600000000000 && epoch < 2500000000000) {
+            return new Date(epoch).toLocaleTimeString('en-US', {
+              timeZone: TIMEZONE_EST,
+              hour: 'numeric',
+              minute: '2-digit'
+            }) + ' EST';
+          }
+        }
+      }
+
+      // 2. Parse ts
       try {
         let d;
-        if (typeof ts === 'string') {
-          const s = ts.trim();
-          d = new Date(s);
-          if (isNaN(d.getTime())) {
-            d = new Date(s.replace(/-/g, '/'));
-          }
-        } else {
+        if (typeof ts === 'number') {
           d = new Date(ts);
+        } else if (typeof ts === 'string') {
+          const s = ts.trim();
+          if (s.endsWith('Z')) {
+            d = new Date(s);
+          } else if (/\bE[SD]T$/i.test(s)) {
+            const clean = s.replace(/\s*E[SD]T$/i, '').trim();
+            d = new Date(clean.replace(/-/g, '/') + ' EST');
+            if (isNaN(d.getTime())) d = new Date(clean);
+          } else {
+            d = new Date(s.replace(/-/g, '/'));
+            if (isNaN(d.getTime())) d = new Date(s);
+          }
+        } else if (ts instanceof Date) {
+          d = ts;
         }
-        if (isNaN(d.getTime())) return String(ts);
-        return d.toLocaleTimeString('en-US', {
-          timeZone: TIMEZONE_EST,
-          hour: 'numeric',
-          minute: '2-digit'
-        }) + ' EST';
-      } catch (e) {
-        return String(ts);
-      }
+
+        if (d && !isNaN(d.getTime())) {
+          return d.toLocaleTimeString('en-US', {
+            timeZone: TIMEZONE_EST,
+            hour: 'numeric',
+            minute: '2-digit'
+          }) + ' EST';
+        }
+      } catch (e) {}
+
+      return String(ts || 'Just now');
     }
 
     function adminApplyNotifPreset(text) {
@@ -4119,7 +4197,7 @@
           <div class="p-2 rounded-lg bg-white border border-amber-300/80 shadow-xs space-y-1">
             <div class="flex items-center justify-between text-[11px] gap-2">
               <span class="font-extrabold text-royal-900">${escapeHtml(item.Sender || 'Parish Admin')} ${badge}</span>
-              <span class="text-[10px] text-slate-500 font-mono">${escapeHtml(formatEstTimestamp(item.Timestamp || ''))}</span>
+              <span class="text-[10px] text-slate-500 font-mono">${escapeHtml(formatEstTimestamp(item))}</span>
             </div>
             <p class="text-xs font-bold text-slate-800 leading-snug">${escapeHtml(item.Message || '')}</p>
           </div>
@@ -4152,7 +4230,7 @@
       const msgEl = document.getElementById('notifMessageContent');
 
       if (senderEl) senderEl.textContent = notif.Sender || 'Parish Organizer';
-      if (timeEl) timeEl.textContent = formatNotifTime(notif.Timestamp);
+      if (timeEl) timeEl.textContent = formatNotifTime(notif);
       if (msgEl) msgEl.textContent = notif.Message || '';
 
       modal.classList.remove('hidden');
@@ -4562,7 +4640,7 @@
               <p class="text-[11px] text-slate-600 font-medium">
                 ${escapeHtml(sub.Game_Mode)} • <strong>${sub.Correct_Score} pts</strong> • Attempted: ${sub.Total_Attempted} (${sub.Accuracy_Percent}%) • Time: ${sub.Time_Taken_Sec}s
               </p>
-              ${sub.Timestamp ? `<p class="text-[10px] text-slate-500 font-mono">🕒 ${escapeHtml(formatEstTimestamp(sub.Timestamp))}</p>` : ''}
+              ${sub.Timestamp ? `<p class="text-[10px] text-slate-500 font-mono">🕒 ${escapeHtml(formatEstTimestamp(sub))}</p>` : ''}
             </div>
             <span class="px-2 py-1 rounded-lg font-extrabold shrink-0 ${isSynced ? 'bg-emerald-100 text-emerald-900' : 'bg-amber-100 text-amber-900'}">
               ${isSynced ? '☁ Cloud' : '💾 Local'}
