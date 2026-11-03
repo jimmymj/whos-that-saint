@@ -405,6 +405,7 @@
           <div class="bg-slate-50 rounded-xl p-2 border border-slate-200">
             <p class="text-[11px] font-bold text-slate-500 uppercase">Total Points</p>
             <p id="resultScoreStat" class="text-xl font-black text-royal-900">0 pts</p>
+            <p id="resultBonusBreakdown" class="text-[10px] font-bold text-amber-700 hidden">+0 bonus</p>
           </div>
           <div class="bg-slate-50 rounded-xl p-2 border border-slate-200">
             <p class="text-[11px] font-bold text-slate-500 uppercase">Saints Recorded</p>
@@ -570,6 +571,45 @@
             </button>
           </div>
           <p id="adminOptionSyncStatusText" class="text-[11px] font-bold text-slate-600"></p>
+        </div>
+
+        <!-- ADMIN CONTROLS: ⭐ BONUS TRIVIA QUESTIONS & EXTRA POINTS (SYNCED TO CLOUD SHEET) -->
+        <div class="w-full rounded-xl p-3 bg-amber-50/90 border-2 border-amber-400 space-y-2.5">
+          <div class="flex items-center justify-between gap-2 border-b border-amber-300 pb-1.5">
+            <div class="flex items-center gap-2">
+              <span class="text-xl">⭐</span>
+              <div>
+                <h3 class="text-sm sm:text-base font-black text-royal-900">Bonus Questions &amp; Extra Points Framework</h3>
+                <p class="text-[11px] text-slate-700 font-semibold">Triggers a bonus Catholic trivia question after correct matches. Stored in <code class="bg-amber-200/70 px-1 rounded font-mono">Bonus_Questions</code> &amp; logged to <code class="bg-amber-200/70 px-1 rounded font-mono">Bonus_Question_Logs</code>.</p>
+              </div>
+            </div>
+            <span id="adminBonusQuestionsBadge" class="bg-royal-900 text-amber-300 text-[10px] font-black px-2 py-1 rounded-lg shrink-0">
+              Live Sync
+            </span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-0.5">
+            <!-- Toggle Bonus Questions -->
+            <button type="button" id="btnAdminToggleBonus" onclick="toggleAdminBonusQuestions()"
+              class="w-full min-h-[46px] rounded-xl p-2.5 bg-white border-2 border-emerald-600 text-left font-extrabold text-xs sm:text-sm text-royal-900 flex items-center justify-between gap-2 shadow-sm active:scale-[0.99]">
+              <span>Bonus Questions:</span>
+              <span id="labelAdminBonusStatus" class="bg-emerald-700 text-white px-2.5 py-1 rounded-lg text-xs font-black shrink-0">✓ Active</span>
+            </button>
+
+            <!-- Bonus Points Value Input -->
+            <div class="flex items-center gap-2 bg-white rounded-xl p-2 border-2 border-amber-300">
+              <label for="inputAdminBonusPoints" class="text-xs font-black text-royal-950 shrink-0">Points / Question:</label>
+              <input id="inputAdminBonusPoints" type="number" min="1" max="50" value="5"
+                onchange="adminUpdateBonusPoints(this.value)"
+                class="flex-1 min-h-[34px] px-2 rounded-lg bg-amber-50 border border-amber-400 font-mono font-bold text-center text-sm text-royal-950" />
+              <span class="text-xs font-extrabold text-slate-600 shrink-0">pts</span>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between text-[11px] font-bold text-slate-600 px-0.5">
+            <span id="adminBonusPoolStats">📚 Question Pool: 15 Questions</span>
+            <span id="adminBonusSyncStatusText" class="text-emerald-700 font-bold"></span>
+          </div>
         </div>
 
         <!-- ADMIN CONTROLS: LIVE PARISH ANNOUNCEMENT & POPUP NOTIFICATION (SAVED TO GOOGLE SHEET) -->
@@ -966,6 +1006,51 @@
     </div>
   </div>
 
+  <!-- ⭐ BONUS TRIVIA QUESTION & EXTRA POINTS MODAL -->
+  <div id="modalBonusQuestion" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 animate-fade-in">
+    <div class="w-full max-w-md rounded-2xl bg-gradient-to-b from-royal-950 via-royal-900 to-royal-950 p-4 border-4 border-amber-400 shadow-2xl space-y-3.5 text-white">
+      <!-- Header -->
+      <div class="flex items-center justify-between border-b border-amber-400/30 pb-2.5">
+        <div class="flex items-center gap-2">
+          <span class="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-300 to-amber-500 text-royal-950 flex items-center justify-center text-xl font-black shadow-md">
+            ⭐
+          </span>
+          <div>
+            <h3 class="text-sm sm:text-base font-black text-amber-300 leading-tight">BONUS CATHOLIC TRIVIA!</h3>
+            <span id="bonusPointBadge" class="text-[11px] font-extrabold text-amber-200 opacity-90">Answer correctly for +5 Extra Points!</span>
+          </div>
+        </div>
+        <span id="bonusPoolCounter" class="text-[10px] font-mono text-amber-200/90 bg-royal-800 px-2 py-0.5 rounded-full border border-amber-400/30 shrink-0">Bonus</span>
+      </div>
+
+      <!-- Question Text Box -->
+      <div class="p-3.5 rounded-xl bg-liturgical-cream border-2 border-amber-400 text-royal-950 shadow-inner">
+        <p class="text-[10px] uppercase font-black tracking-wide text-royal-800/80 mb-0.5">Bonus Question:</p>
+        <p id="bonusQuestionText" class="text-sm sm:text-base font-black leading-snug"></p>
+      </div>
+
+      <!-- Options (A, B, C, D) Container -->
+      <div id="bonusOptionsContainer" class="space-y-2">
+        <!-- Dynamically rendered options -->
+      </div>
+
+      <!-- Feedback Banner (Hidden initially) -->
+      <div id="bonusFeedbackBanner" class="hidden rounded-xl p-2.5 text-center text-xs font-black transition-all"></div>
+
+      <!-- Action Buttons (Skip / Continue) -->
+      <div class="flex items-center gap-2 pt-1">
+        <button type="button" id="btnSkipBonus" onclick="skipBonusQuestion()"
+          class="flex-1 min-h-[42px] px-3 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-slate-300 font-extrabold text-xs border border-slate-600 active:scale-[0.98]">
+          Skip / Next Saint ➔
+        </button>
+        <button type="button" id="btnContinueBonus" onclick="confirmContinueFromBonus()"
+          class="hidden flex-1 min-h-[42px] px-3 rounded-xl bg-gradient-to-r from-amber-400 to-amber-300 hover:from-amber-300 hover:to-amber-200 text-royal-950 font-black text-xs shadow-md active:scale-[0.98]">
+          Continue to Next Saint ➔
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- PARISH BROADCAST POPUP NOTIFICATION MODAL -->
   <div id="modalParishNotification" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 animate-fade-in">
     <div class="w-full max-w-sm rounded-2xl bg-gradient-to-b from-royal-950 via-royal-900 to-royal-950 p-4 border-4 border-amber-400 shadow-2xl space-y-3.5 text-white">
@@ -1039,7 +1124,8 @@
       SETTINGS: 'whos_that_saint_settings_v6',
       ROSTER: 'whos_that_saint_roster_v6',
       SUBMISSIONS: 'whos_that_saint_submissions_v5',
-      LAST_SEEN_NOTIF: 'whos_that_saint_last_seen_notif_v1'
+      LAST_SEEN_NOTIF: 'whos_that_saint_last_seen_notif_v1',
+      BONUS_QUESTIONS: 'whos_that_saint_bonus_questions_v1'
     };
 
     // Official 71 Parish Kids & Saints (Loaded instantly from Documents/SaintList.csv)
@@ -1828,11 +1914,165 @@
       return String(ts || '');
     }
 
+    const DEFAULT_BONUS_QUESTIONS = [
+      {
+        Question_ID: 'BONUS-001',
+        Question_Text: 'In Catholic tradition, how many Holy Sacraments are instituted by Christ?',
+        Option_A: '7 Sacraments',
+        Option_B: '3 Sacraments',
+        Option_C: '10 Sacraments',
+        Option_D: '12 Sacraments',
+        Correct_Answer: '7 Sacraments',
+        Status: 'ACTIVE'
+      },
+      {
+        Question_ID: 'BONUS-002',
+        Question_Text: 'Which liturgical color is traditionally worn by priests during Ordinary Time?',
+        Option_A: 'Green',
+        Option_B: 'Red',
+        Option_C: 'Purple',
+        Option_D: 'White',
+        Correct_Answer: 'Green',
+        Status: 'ACTIVE'
+      },
+      {
+        Question_ID: 'BONUS-003',
+        Question_Text: 'What is the very first book of the Holy Bible?',
+        Option_A: 'Genesis',
+        Option_B: 'Exodus',
+        Option_C: 'Matthew',
+        Option_D: 'Psalms',
+        Correct_Answer: 'Genesis',
+        Status: 'ACTIVE'
+      },
+      {
+        Question_ID: 'BONUS-004',
+        Question_Text: 'What do the four candles on an Advent wreath symbolize?',
+        Option_A: 'The four weeks of Advent waiting for Christ',
+        Option_B: 'The four Gospel Evangelists',
+        Option_C: 'The four seasons of the year',
+        Option_D: 'The four cardinal virtues',
+        Correct_Answer: 'The four weeks of Advent waiting for Christ',
+        Status: 'ACTIVE'
+      },
+      {
+        Question_ID: 'BONUS-005',
+        Question_Text: 'Which prayer did Jesus Himself teach His disciples in the Gospels?',
+        Option_A: 'The Lord\'s Prayer (Our Father)',
+        Option_B: 'The Hail Mary',
+        Option_C: 'The Apostles\' Creed',
+        Option_D: 'The Glory Be',
+        Correct_Answer: 'The Lord\'s Prayer (Our Father)',
+        Status: 'ACTIVE'
+      },
+      {
+        Question_ID: 'BONUS-006',
+        Question_Text: 'On what date does the Catholic Church celebrate All Saints\' Day every year?',
+        Option_A: 'November 1st',
+        Option_B: 'October 31st',
+        Option_C: 'December 25th',
+        Option_D: 'January 1st',
+        Correct_Answer: 'November 1st',
+        Status: 'ACTIVE'
+      },
+      {
+        Question_ID: 'BONUS-007',
+        Question_Text: 'To which Apostle did Jesus say, "You are Peter, and upon this rock I will build my Church"?',
+        Option_A: 'Saint Peter',
+        Option_B: 'Saint Paul',
+        Option_C: 'Saint John',
+        Option_D: 'Saint Andrew',
+        Correct_Answer: 'Saint Peter',
+        Status: 'ACTIVE'
+      },
+      {
+        Question_ID: 'BONUS-008',
+        Question_Text: 'How many decades are prayed in one standard mystery of the Holy Rosary?',
+        Option_A: '5 decades',
+        Option_B: '3 decades',
+        Option_C: '7 decades',
+        Option_D: '10 decades',
+        Correct_Answer: '5 decades',
+        Status: 'ACTIVE'
+      },
+      {
+        Question_ID: 'BONUS-009',
+        Question_Text: 'Which liturgical season of prayer and fasting directly precedes Easter?',
+        Option_A: 'Lent',
+        Option_B: 'Advent',
+        Option_C: 'Ordinary Time',
+        Option_D: 'Christmastide',
+        Correct_Answer: 'Lent',
+        Status: 'ACTIVE'
+      },
+      {
+        Question_ID: 'BONUS-010',
+        Question_Text: 'What gift of the Holy Spirit helps us judge rightly between good and evil in God\'s light?',
+        Option_A: 'Wisdom',
+        Option_B: 'Courage',
+        Option_C: 'Piety',
+        Option_D: 'Knowledge',
+        Correct_Answer: 'Wisdom',
+        Status: 'ACTIVE'
+      },
+      {
+        Question_ID: 'BONUS-011',
+        Question_Text: 'Which Archangel greeted the Blessed Virgin Mary at the Annunciation?',
+        Option_A: 'Archangel Gabriel',
+        Option_B: 'Archangel Michael',
+        Option_C: 'Archangel Raphael',
+        Option_D: 'Archangel Uriel',
+        Correct_Answer: 'Archangel Gabriel',
+        Status: 'ACTIVE'
+      },
+      {
+        Question_ID: 'BONUS-012',
+        Question_Text: 'What is the sacred vessel in church where the Blessed Sacrament is reserved called?',
+        Option_A: 'Tabernacle',
+        Option_B: 'Altar',
+        Option_C: 'Ambo',
+        Option_D: 'Chalice',
+        Correct_Answer: 'Tabernacle',
+        Status: 'ACTIVE'
+      },
+      {
+        Question_ID: 'BONUS-013',
+        Question_Text: 'How many days did Jesus fast in the desert before beginning His public ministry?',
+        Option_A: '40 days',
+        Option_B: '12 days',
+        Option_C: '7 days',
+        Option_D: '3 days',
+        Correct_Answer: '40 days',
+        Status: 'ACTIVE'
+      },
+      {
+        Question_ID: 'BONUS-014',
+        Question_Text: 'Which of the four Gospel writers was a physician and companion of Saint Paul?',
+        Option_A: 'Saint Luke',
+        Option_B: 'Saint Matthew',
+        Option_C: 'Saint Mark',
+        Option_D: 'Saint John',
+        Correct_Answer: 'Saint Luke',
+        Status: 'ACTIVE'
+      },
+      {
+        Question_ID: 'BONUS-015',
+        Question_Text: 'What feast day immediately follows All Saints\' Day on November 2nd?',
+        Option_A: 'All Souls\' Day',
+        Option_B: 'Feast of Christ the King',
+        Option_C: 'Epiphany',
+        Option_D: 'Pentecost',
+        Correct_Answer: 'All Souls\' Day',
+        Status: 'ACTIVE'
+      }
+    ];
+
     let appState = {
       currentView: 'registration',
       selectedOption: 'Find Saint by Kid Name', // 'Find Saint by Kid Name' | 'Find Kid by Saint Name'
       cloudSyncLoading: false,
       roster: JSON.parse(JSON.stringify(DEFAULT_ROSTER)),
+      bonusQuestions: JSON.parse(JSON.stringify(DEFAULT_BONUS_QUESTIONS)),
       submissions: [],
       lastSeenNotificationId: '',
       latestNotification: null,
@@ -1844,7 +2084,9 @@
         requireSecretPin: false,
         adminPin: '1101',
         eventStatus: 'RUNNING', // 'RUNNING' or 'STOPPED'
-        eventEndTime: 0         // epoch timestamp ms, 0 = no limit
+        eventEndTime: 0,        // epoch timestamp ms, 0 = no limit
+        bonusQuestionsEnabled: true,
+        bonusPointsPerQuestion: 5
       },
       session: {
         active: false,
@@ -1854,10 +2096,17 @@
         startTimeMs: 0,
         elapsedSec: 0,
         timerInterval: null,
+        timerPaused: false,
+        timerPausedAtMs: 0,
         answeredBibs: {}, // { [bibNumber]: { correct: boolean, chosen: string, pointsEarned: number, clueUsed: boolean } }
         cluesUsedBibs: {}, // { [bibNumber]: true }
         matchedBibIds: [],
         pointsScore: 0,
+        bonusPointsEarned: 0,
+        bonusQuestionsAttempted: 0,
+        bonusQuestionsCorrect: 0,
+        seenBonusQuestionIds: [],
+        activeBonusQuestion: null,
         correctMatches: 0,
         totalAttempted: 0,
         currentQuestion: null,
@@ -2046,8 +2295,20 @@
             option1_KidToSaint: parsed.option1_KidToSaint !== undefined ? Boolean(parsed.option1_KidToSaint) : true,
             option2_SaintToKid: parsed.option2_SaintToKid !== undefined ? Boolean(parsed.option2_SaintToKid) : true,
             eventStatus: parsed.eventStatus === 'STOPPED' ? 'STOPPED' : 'RUNNING',
-            eventEndTime: Number(parsed.eventEndTime) || 0
+            eventEndTime: Number(parsed.eventEndTime) || 0,
+            bonusQuestionsEnabled: parsed.bonusQuestionsEnabled !== undefined ? Boolean(parsed.bonusQuestionsEnabled) : true,
+            bonusPointsPerQuestion: Number(parsed.bonusPointsPerQuestion) || 5
           };
+        }
+
+        const savedBonus = localStorage.getItem(STORAGE_KEYS.BONUS_QUESTIONS);
+        if (savedBonus) {
+          try {
+            const parsedBonus = JSON.parse(savedBonus);
+            if (Array.isArray(parsedBonus) && parsedBonus.length > 0) {
+              appState.bonusQuestions = parsedBonus;
+            }
+          } catch (e) {}
         }
 
         // Support URL parameter override for instant cloud sync onboarding (?sync=... or ?key=...)
@@ -2186,6 +2447,7 @@
           : "bg-red-700 text-white px-2.5 py-1 rounded-lg text-xs font-black shrink-0";
       }
 
+      updateBonusAdminUI();
       saveRosterToStorage();
     }
 
@@ -2500,10 +2762,17 @@
         startTimeMs: Date.now(),
         elapsedSec: 0,
         timerInterval: null,
+        timerPaused: false,
+        timerPausedAtMs: 0,
         answeredBibs: {},
         cluesUsedBibs: {},
         matchedBibIds: [],
         pointsScore: 0,
+        bonusPointsEarned: 0,
+        bonusQuestionsAttempted: 0,
+        bonusQuestionsCorrect: 0,
+        seenBonusQuestionIds: [],
+        activeBonusQuestion: null,
         correctMatches: 0,
         totalAttempted: 0,
         currentQuestion: null,
@@ -2515,7 +2784,7 @@
       hasShownOneMinuteWarningModal = false;
 
       appState.session.timerInterval = setInterval(() => {
-        if (appState.session.active) {
+        if (appState.session.active && !appState.session.timerPaused) {
           appState.session.elapsedSec = Math.max(1, Math.floor((Date.now() - appState.session.startTimeMs) / 1000));
           renderHeaderStatus();
         }
@@ -2523,6 +2792,34 @@
 
       renderHeaderStatus();
       switchView('bibExplorer');
+    }
+
+    function pauseGameTimer() {
+      if (appState.session.timerInterval) {
+        clearInterval(appState.session.timerInterval);
+        appState.session.timerInterval = null;
+      }
+      appState.session.timerPaused = true;
+      appState.session.timerPausedAtMs = Date.now();
+    }
+
+    function resumeGameTimer() {
+      if (!appState.session.active) return;
+      if (appState.session.timerPaused && appState.session.timerPausedAtMs > 0) {
+        const pausedDuration = Date.now() - appState.session.timerPausedAtMs;
+        appState.session.startTimeMs += pausedDuration;
+        appState.session.timerPaused = false;
+        appState.session.timerPausedAtMs = 0;
+      }
+      if (appState.session.timerInterval) {
+        clearInterval(appState.session.timerInterval);
+      }
+      appState.session.timerInterval = setInterval(() => {
+        if (appState.session.active && !appState.session.timerPaused) {
+          appState.session.elapsedSec = Math.max(1, Math.floor((Date.now() - appState.session.startTimeMs) / 1000));
+          renderHeaderStatus();
+        }
+      }, 1000);
     }
 
     function renderHeaderStatus() {
@@ -2951,11 +3248,224 @@
         }
       }
 
-      // Automatically advance to next unanswered question while user enjoys encouragement
-      setTimeout(() => {
-        if (appState.currentView !== 'questionCard') return;
+      // If match is correct and bonus questions are enabled, prompt bonus trivia question modal
+      if (isCorrect && appState.settings.bonusQuestionsEnabled !== false && appState.bonusQuestions && appState.bonusQuestions.length > 0) {
+        setTimeout(() => {
+          if (appState.currentView !== 'questionCard') return;
+          showBonusQuestionModal();
+        }, 750);
+      } else {
+        // Automatically advance to next unanswered question while user enjoys encouragement
+        setTimeout(() => {
+          if (appState.currentView !== 'questionCard') return;
+          openNextUnansweredBib();
+        }, 1100);
+      }
+    }
+
+    /**************************************************************
+     * 6B. BONUS QUESTIONS & EXTRA POINTS FRAMEWORK
+     **************************************************************/
+    function showBonusQuestionModal() {
+      const modal = document.getElementById('modalBonusQuestion');
+      if (!modal) {
         openNextUnansweredBib();
-      }, 1100);
+        return;
+      }
+
+      // 1. Pause game timer so player is not penalized while reading trivia
+      pauseGameTimer();
+
+      // 2. Select question from pool that has not been shown in this session yet
+      const pool = (appState.bonusQuestions || []).filter(q => String(q.Status || 'ACTIVE').toUpperCase() !== 'INACTIVE');
+      if (pool.length === 0) {
+        resumeGameTimer();
+        openNextUnansweredBib();
+        return;
+      }
+
+      if (!Array.isArray(appState.session.seenBonusQuestionIds)) {
+        appState.session.seenBonusQuestionIds = [];
+      }
+
+      let unseen = pool.filter(q => !appState.session.seenBonusQuestionIds.includes(q.Question_ID));
+      if (unseen.length === 0) {
+        // All questions in pool seen, reset session tracker and pick from full pool
+        appState.session.seenBonusQuestionIds = [];
+        unseen = pool;
+      }
+
+      const selectedQ = unseen[Math.floor(Math.random() * unseen.length)];
+      appState.session.seenBonusQuestionIds.push(selectedQ.Question_ID);
+      appState.session.activeBonusQuestion = selectedQ;
+
+      // 3. Prepare options and dynamically shuffle choice index (A, B, C, D) using Fisher-Yates
+      const rawOptions = [
+        selectedQ.Option_A,
+        selectedQ.Option_B,
+        selectedQ.Option_C,
+        selectedQ.Option_D
+      ].filter(opt => opt !== undefined && opt !== null && String(opt).trim() !== '');
+
+      const shuffledOptions = [...rawOptions];
+      for (let i = shuffledOptions.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffledOptions[i], shuffledOptions[j]] = [shuffledOptions[j], shuffledOptions[i]];
+      }
+      appState.session.activeBonusQuestion.shuffledOptions = shuffledOptions;
+
+      // 4. Populate UI
+      const pointVal = Number(appState.settings.bonusPointsPerQuestion) || 5;
+      const pointBadge = document.getElementById('bonusPointBadge');
+      if (pointBadge) {
+        pointBadge.textContent = `Answer correctly for +${pointVal} Extra Points!`;
+      }
+
+      const counterBadge = document.getElementById('bonusPoolCounter');
+      if (counterBadge) {
+        counterBadge.textContent = `Bonus #${appState.session.seenBonusQuestionIds.length}`;
+      }
+
+      const questionTextEl = document.getElementById('bonusQuestionText');
+      if (questionTextEl) {
+        questionTextEl.textContent = selectedQ.Question_Text;
+      }
+
+      const optionsContainer = document.getElementById('bonusOptionsContainer');
+      const letterPrefixes = ['A', 'B', 'C', 'D'];
+      if (optionsContainer) {
+        optionsContainer.innerHTML = shuffledOptions.map((optText, idx) => {
+          const letter = letterPrefixes[idx] || (idx + 1);
+          return `
+            <button type="button" id="btnBonusOpt_${idx}" onclick="handleBonusOptionSelected(${idx})"
+              class="w-full min-h-[46px] p-2.5 rounded-xl bg-white hover:bg-amber-50/90 border-2 border-amber-300 text-left flex items-center gap-2.5 shadow-sm active:scale-[0.99] transition-all">
+              <span class="w-7 h-7 rounded-lg bg-royal-900 text-amber-300 flex items-center justify-center font-black text-xs shrink-0">${letter}</span>
+              <span class="flex-1 text-left font-extrabold text-xs sm:text-sm text-royal-950">${escapeHtml(optText)}</span>
+            </button>
+          `;
+        }).join('');
+      }
+
+      // Reset feedback banner & action buttons
+      const banner = document.getElementById('bonusFeedbackBanner');
+      if (banner) {
+        banner.className = "hidden rounded-xl p-2.5 text-center text-xs font-black transition-all";
+        banner.innerHTML = '';
+      }
+
+      const btnSkip = document.getElementById('btnSkipBonus');
+      const btnContinue = document.getElementById('btnContinueBonus');
+      if (btnSkip) btnSkip.classList.remove('hidden');
+      if (btnContinue) btnContinue.classList.add('hidden');
+
+      modal.classList.remove('hidden');
+    }
+
+    function handleBonusOptionSelected(chosenIndex) {
+      const activeQ = appState.session.activeBonusQuestion;
+      if (!activeQ || !Array.isArray(activeQ.shuffledOptions)) return;
+
+      const chosenText = String(activeQ.shuffledOptions[chosenIndex] || '').trim();
+      const correctText = String(activeQ.Correct_Answer || '').trim();
+      const isCorrect = chosenText.toLowerCase() === correctText.toLowerCase();
+      const pointVal = Number(appState.settings.bonusPointsPerQuestion) || 5;
+
+      // 1. Disable all option buttons to prevent multiple clicks
+      activeQ.shuffledOptions.forEach((_, idx) => {
+        const btn = document.getElementById(`btnBonusOpt_${idx}`);
+        if (btn) btn.disabled = true;
+      });
+
+      // 2. Visual feedback on buttons
+      activeQ.shuffledOptions.forEach((optText, idx) => {
+        const btn = document.getElementById(`btnBonusOpt_${idx}`);
+        if (!btn) return;
+        const isThisCorrect = String(optText).trim().toLowerCase() === correctText.toLowerCase();
+        if (idx === chosenIndex) {
+          if (isCorrect) {
+            btn.className = "w-full min-h-[46px] p-2.5 rounded-xl bg-emerald-100 border-2 border-emerald-500 text-left flex items-center gap-2.5 shadow-sm";
+          } else {
+            btn.className = "w-full min-h-[46px] p-2.5 rounded-xl bg-rose-100 border-2 border-rose-500 text-left flex items-center gap-2.5 shadow-sm";
+          }
+        } else if (isThisCorrect && !isCorrect) {
+          // Highlight correct answer in green
+          btn.className = "w-full min-h-[46px] p-2.5 rounded-xl bg-emerald-50 border-2 border-emerald-400 text-left flex items-center gap-2.5 shadow-sm";
+        }
+      });
+
+      // 3. Update points and feedback banner
+      const banner = document.getElementById('bonusFeedbackBanner');
+      if (isCorrect) {
+        appState.session.bonusPointsEarned = (appState.session.bonusPointsEarned || 0) + pointVal;
+        appState.session.bonusQuestionsCorrect = (appState.session.bonusQuestionsCorrect || 0) + 1;
+        playNotificationChime();
+        if (banner) {
+          banner.className = "rounded-xl p-2.5 text-center text-xs sm:text-sm font-black bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 text-white border-2 border-emerald-300 shadow-md";
+          banner.innerHTML = `🎉 Correct! +${pointVal} Extra Bonus Points Added! ⭐`;
+        }
+        showToast(`+${pointVal} Bonus Points!`, "success");
+      } else {
+        if (banner) {
+          banner.className = "rounded-xl p-2.5 text-center text-xs sm:text-sm font-extrabold bg-amber-100 text-royal-950 border-2 border-amber-400 shadow-sm";
+          banner.innerHTML = `✕ Good try! The correct answer was: <strong>${escapeHtml(correctText)}</strong>`;
+        }
+      }
+      appState.session.bonusQuestionsAttempted = (appState.session.bonusQuestionsAttempted || 0) + 1;
+
+      // 4. Asynchronously log answer to Google Sheet (Bonus_Question_Logs)
+      if (getActiveCloudUrl()) {
+        sendCloudWriteRequest('recordBonusAnswer', {
+          Participant_Name: appState.session.participantName,
+          Family_or_Phone: appState.session.familyOrPhone,
+          Question_ID: activeQ.Question_ID,
+          Question_Text: activeQ.Question_Text,
+          Selected_Option: chosenText,
+          Is_Correct: isCorrect,
+          Bonus_Points_Earned: isCorrect ? pointVal : 0,
+          Cumulative_Bonus_Points: appState.session.bonusPointsEarned
+        });
+      }
+
+      // 5. Switch to Continue button & schedule auto-advance
+      const btnSkip = document.getElementById('btnSkipBonus');
+      const btnContinue = document.getElementById('btnContinueBonus');
+      if (btnSkip) btnSkip.classList.add('hidden');
+      if (btnContinue) btnContinue.classList.remove('hidden');
+
+      if (bonusAutoAdvanceTimer) {
+        clearTimeout(bonusAutoAdvanceTimer);
+      }
+      bonusAutoAdvanceTimer = setTimeout(() => {
+        confirmContinueFromBonus();
+      }, 1500);
+    }
+
+    let bonusAutoAdvanceTimer = null;
+
+    function confirmContinueFromBonus() {
+      if (bonusAutoAdvanceTimer) {
+        clearTimeout(bonusAutoAdvanceTimer);
+        bonusAutoAdvanceTimer = null;
+      }
+      const modal = document.getElementById('modalBonusQuestion');
+      if (!modal || modal.classList.contains('hidden')) return;
+      modal.classList.add('hidden');
+      appState.session.activeBonusQuestion = null;
+      resumeGameTimer();
+      openNextUnansweredBib();
+    }
+
+    function skipBonusQuestion() {
+      if (bonusAutoAdvanceTimer) {
+        clearTimeout(bonusAutoAdvanceTimer);
+        bonusAutoAdvanceTimer = null;
+      }
+      const modal = document.getElementById('modalBonusQuestion');
+      if (!modal || modal.classList.contains('hidden')) return;
+      modal.classList.add('hidden');
+      appState.session.activeBonusQuestion = null;
+      resumeGameTimer();
+      openNextUnansweredBib();
     }
 
     function openNextUnansweredBib() {
@@ -2998,6 +3508,15 @@
       if (warningBanner) warningBanner.classList.add('hidden');
       hasShownOneMinuteWarningModal = false;
 
+      // Dismiss Bonus Question modal if open
+      if (bonusAutoAdvanceTimer) {
+        clearTimeout(bonusAutoAdvanceTimer);
+        bonusAutoAdvanceTimer = null;
+      }
+      const bonusModal = document.getElementById('modalBonusQuestion');
+      if (bonusModal) bonusModal.classList.add('hidden');
+      appState.session.activeBonusQuestion = null;
+
       if (appState.session.timerInterval) {
         clearInterval(appState.session.timerInterval);
       }
@@ -3009,13 +3528,19 @@
       const nowEst = getNowEstTimestamp();
       const submissionId = `SUB-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
 
+      const basePoints = appState.session.pointsScore;
+      const bonusPoints = appState.session.bonusPointsEarned || 0;
+      const totalScore = basePoints + bonusPoints;
+
       const record = {
         Submission_ID: submissionId,
         Timestamp: nowEst,
         Participant_Name: sanitizeForSheet(appState.session.participantName),
         Family_or_Phone: sanitizeForSheet(appState.session.familyOrPhone || ''),
         Game_Mode: appState.session.gameMode,
-        Correct_Score: appState.session.pointsScore, // Total Points (10 per correct, -2 if outfit clue used)
+        Correct_Score: basePoints,
+        Bonus_Points: bonusPoints,
+        Total_Score: totalScore,
         Total_Attempted: appState.session.totalAttempted,
         Accuracy_Percent: accuracy,
         Time_Taken_Sec: timeTaken,
@@ -3032,7 +3557,16 @@
       if (personalCard) {
         personalCard.classList.remove('hidden');
         document.getElementById('resultPlayerName').textContent = record.Participant_Name;
-        document.getElementById('resultScoreStat').textContent = `${record.Correct_Score} pts`;
+        document.getElementById('resultScoreStat').textContent = `${record.Total_Score} pts`;
+        const bonusBreakdownEl = document.getElementById('resultBonusBreakdown');
+        if (bonusBreakdownEl) {
+          if (bonusPoints > 0) {
+            bonusBreakdownEl.textContent = `(Base: ${basePoints} pts • Bonus: +${bonusPoints} pts)`;
+            bonusBreakdownEl.classList.remove('hidden');
+          } else {
+            bonusBreakdownEl.classList.add('hidden');
+          }
+        }
         document.getElementById('resultAttemptedStat').textContent = `${record.Total_Attempted}`;
         document.getElementById('resultTimeStat').textContent = `${record.Time_Taken_Sec}s`;
         updatePersonalSyncBadge('Saved Locally - Pending Sync', false);
@@ -3114,7 +3648,7 @@
 
       const sep = url.includes('?') ? '&' : '?';
 
-      // Tier 1: Try fast GET for compact score submissions
+      // Tier 1: Try fast GET for compact score submissions & real-time bonus answer logging
       if (action === 'submitScore' && payloadObj) {
         const qParams = new URLSearchParams({
           action: 'submitScore',
@@ -3123,6 +3657,8 @@
           Family_or_Phone: payloadObj.Family_or_Phone || '',
           Game_Mode: payloadObj.Game_Mode || '',
           Correct_Score: String(payloadObj.Correct_Score || 0),
+          Bonus_Points: String(payloadObj.Bonus_Points || 0),
+          Total_Score: String(payloadObj.Total_Score || payloadObj.Correct_Score || 0),
           Total_Attempted: String(payloadObj.Total_Attempted || 0),
           Accuracy_Percent: String(payloadObj.Accuracy_Percent || 0),
           Time_Taken_Sec: String(payloadObj.Time_Taken_Sec || 0),
@@ -3147,6 +3683,37 @@
           }
         } catch (getErr) {
           console.warn('GET submission attempt failed, continuing to POST:', getErr);
+        }
+      }
+
+      if (action === 'recordBonusAnswer' && payloadObj) {
+        const qParams = new URLSearchParams({
+          action: 'recordBonusAnswer',
+          Log_ID: payloadObj.Log_ID || '',
+          Participant_Name: payloadObj.Participant_Name || '',
+          Family_or_Phone: payloadObj.Family_or_Phone || '',
+          Question_ID: payloadObj.Question_ID || '',
+          Question_Text: payloadObj.Question_Text || '',
+          Selected_Option: payloadObj.Selected_Option || '',
+          Is_Correct: String(payloadObj.Is_Correct),
+          Bonus_Points_Earned: String(payloadObj.Bonus_Points_Earned || 0),
+          Cumulative_Bonus_Points: String(payloadObj.Cumulative_Bonus_Points || 0),
+          _t: String(Date.now())
+        });
+
+        try {
+          const getRes = await fetch(`${url}${sep}${qParams.toString()}`, { redirect: 'follow' });
+          const rawGetText = await getRes.text();
+          if (rawGetText && !rawGetText.includes('Script function not found')) {
+            try {
+              const getData = JSON.parse(rawGetText);
+              if (getData && getData.status === 'success') {
+                return { ok: true, data: getData };
+              }
+            } catch (je) {}
+          }
+        } catch (getErr) {
+          console.warn('GET recordBonusAnswer attempt failed, continuing to POST:', getErr);
         }
       }
 
@@ -3211,9 +3778,11 @@
 
     function getSortedSubmissions(submissionsArray) {
       return [...submissionsArray].sort((a, b) => {
-        const scoreDiff = Number(b.Correct_Score) - Number(a.Correct_Score);
+        const scoreA = Number(a.Total_Score !== undefined && a.Total_Score !== '' ? a.Total_Score : (Number(a.Correct_Score || 0) + Number(a.Bonus_Points || 0)));
+        const scoreB = Number(b.Total_Score !== undefined && b.Total_Score !== '' ? b.Total_Score : (Number(b.Correct_Score || 0) + Number(b.Bonus_Points || 0)));
+        const scoreDiff = scoreB - scoreA;
         if (scoreDiff !== 0) return scoreDiff;
-        return Number(a.Time_Taken_Sec) - Number(b.Time_Taken_Sec);
+        return Number(a.Time_Taken_Sec || 999999) - Number(b.Time_Taken_Sec || 999999);
       });
     }
 
@@ -3259,7 +3828,8 @@
                   </div>
                 </div>
                 <div class="text-right shrink-0">
-                  <p class="text-sm font-black text-emerald-700">${sub.Correct_Score} pts</p>
+                  <p class="text-sm font-black text-emerald-700">${sub.Total_Score !== undefined ? sub.Total_Score : sub.Correct_Score} pts</p>
+                  ${sub.Bonus_Points ? `<p class="text-[10px] font-extrabold text-amber-600">+${sub.Bonus_Points} bonus</p>` : ''}
                   <p class="text-[11px] font-bold text-amber-700">⏱ ${sub.Time_Taken_Sec}s</p>
                 </div>
               </div>
@@ -3596,7 +4166,9 @@
         option2_SaintToKid: appState.settings.option2_SaintToKid !== false,
         requireSecretPin: Boolean(appState.settings.requireSecretPin),
         eventStatus: appState.settings.eventStatus || 'RUNNING',
-        eventEndTime: Number(appState.settings.eventEndTime) || 0
+        eventEndTime: Number(appState.settings.eventEndTime) || 0,
+        bonusQuestionsEnabled: appState.settings.bonusQuestionsEnabled !== false,
+        bonusPointsPerQuestion: Number(appState.settings.bonusPointsPerQuestion) || 5
       });
 
       if (res.ok) {
@@ -3609,6 +4181,52 @@
           statusEl.innerHTML = `<span class="text-amber-800">✓ Saved locally (Cloud sync pending).</span>`;
         }
         if (badgeEl) badgeEl.textContent = "Local Saved";
+      }
+    }
+
+    function toggleAdminBonusQuestions() {
+      appState.settings.bonusQuestionsEnabled = appState.settings.bonusQuestionsEnabled === false ? true : false;
+      saveAdminSettings();
+      updateBonusAdminUI();
+      const stateStr = appState.settings.bonusQuestionsEnabled ? 'Active' : 'Disabled';
+      showToast(`Bonus Trivia Questions are now ${stateStr}!`, "info");
+      saveAdminAppConfigToCloud();
+    }
+
+    function adminUpdateBonusPoints(val) {
+      const pts = Math.max(1, Math.min(50, Math.floor(Number(val) || 5)));
+      appState.settings.bonusPointsPerQuestion = pts;
+      saveAdminSettings();
+      updateBonusAdminUI();
+      showToast(`Bonus Point Value updated to +${pts} pts per question!`, "info");
+      saveAdminAppConfigToCloud();
+    }
+
+    function updateBonusAdminUI() {
+      const isEnabled = appState.settings.bonusQuestionsEnabled !== false;
+      const pts = Number(appState.settings.bonusPointsPerQuestion) || 5;
+
+      const btn = document.getElementById('btnAdminToggleBonus');
+      const label = document.getElementById('labelAdminBonusStatus');
+      const input = document.getElementById('inputAdminBonusPoints');
+      const poolStats = document.getElementById('adminBonusPoolStats');
+
+      if (btn && label) {
+        if (isEnabled) {
+          btn.className = "w-full min-h-[46px] rounded-xl p-2.5 bg-white border-2 border-emerald-600 text-left font-extrabold text-xs sm:text-sm text-royal-900 flex items-center justify-between gap-2 shadow-sm active:scale-[0.99]";
+          label.className = "bg-emerald-700 text-white px-2.5 py-1 rounded-lg text-xs font-black shrink-0";
+          label.textContent = "✓ Active";
+        } else {
+          btn.className = "w-full min-h-[46px] rounded-xl p-2.5 bg-slate-100 border-2 border-slate-400 text-left font-extrabold text-xs sm:text-sm text-slate-600 flex items-center justify-between gap-2 shadow-sm active:scale-[0.99]";
+          label.className = "bg-slate-600 text-white px-2.5 py-1 rounded-lg text-xs font-black shrink-0";
+          label.textContent = "✕ Disabled";
+        }
+      }
+
+      if (input) input.value = pts;
+      if (poolStats) {
+        const count = (appState.bonusQuestions || []).length;
+        poolStats.textContent = `📚 Question Pool: ${count} Questions`;
       }
     }
 
@@ -3982,7 +4600,9 @@
           option2_SaintToKid: appState.settings.option2_SaintToKid !== false,
           requireSecretPin: Boolean(appState.settings.requireSecretPin),
           eventStatus: appState.settings.eventStatus || 'RUNNING',
-          eventEndTime: Number(appState.settings.eventEndTime) || 0
+          eventEndTime: Number(appState.settings.eventEndTime) || 0,
+          bonusQuestionsEnabled: appState.settings.bonusQuestionsEnabled !== false,
+          bonusPointsPerQuestion: Number(appState.settings.bonusPointsPerQuestion) || 5
         });
 
         if (res && res.ok) {
@@ -4386,13 +5006,28 @@
             if (data.config.eventEndTime !== undefined) {
               appState.settings.eventEndTime = Number(data.config.eventEndTime) || 0;
             }
+            if (data.config.bonusQuestionsEnabled !== undefined) {
+              appState.settings.bonusQuestionsEnabled = Boolean(data.config.bonusQuestionsEnabled);
+            }
+            if (data.config.bonusPointsPerQuestion !== undefined) {
+              appState.settings.bonusPointsPerQuestion = Number(data.config.bonusPointsPerQuestion) || 5;
+            }
             localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(appState.settings));
             updateSettingsUI();
             renderActivityOptionsUI();
             renderEventStatusAndTimerUI();
           }
 
-          // 2. Apply Roster & Outfit Clues from Cloud Sheet (only when sheet has rows)
+          // 2. Apply Bonus Questions from Cloud Sheet
+          if (Array.isArray(data.bonusQuestions) && data.bonusQuestions.length > 0) {
+            appState.bonusQuestions = data.bonusQuestions;
+            try {
+              localStorage.setItem(STORAGE_KEYS.BONUS_QUESTIONS, JSON.stringify(data.bonusQuestions));
+            } catch (e) {}
+            updateBonusAdminUI();
+          }
+
+          // 3. Apply Roster & Outfit Clues from Cloud Sheet (only when sheet has rows)
           if (Array.isArray(data.roster) && data.roster.length > 0) {
             appState.roster = data.roster.map((r, i) => ({
               Bib_Number: Number(r.Bib_Number || (i + 1)),
@@ -4597,6 +5232,8 @@
         'Family_or_Phone',
         'Game_Mode',
         'Correct_Score',
+        'Bonus_Points',
+        'Total_Score',
         'Total_Attempted',
         'Accuracy_Percent',
         'Time_Taken_Sec',
@@ -4630,6 +5267,7 @@
 
       container.innerHTML = sorted.map((sub, idx) => {
         const isSynced = sub.Sync_Status === 'Synced to Cloud';
+        const totalPts = sub.Total_Score !== undefined ? sub.Total_Score : (Number(sub.Correct_Score || 0) + Number(sub.Bonus_Points || 0));
         return `
           <div class="w-full rounded-xl p-2.5 bg-slate-50 border border-slate-300 flex items-center justify-between gap-2 text-xs">
             <div class="min-w-0">
@@ -4638,7 +5276,7 @@
                 <span class="text-slate-500 font-semibold">(${escapeHtml(sub.Family_or_Phone || 'No Phone')})</span>
               </p>
               <p class="text-[11px] text-slate-600 font-medium">
-                ${escapeHtml(sub.Game_Mode)} • <strong>${sub.Correct_Score} pts</strong> • Attempted: ${sub.Total_Attempted} (${sub.Accuracy_Percent}%) • Time: ${sub.Time_Taken_Sec}s
+                ${escapeHtml(sub.Game_Mode)} • <strong>${totalPts} pts</strong> (Base: ${sub.Correct_Score}${sub.Bonus_Points ? `, Bonus: +${sub.Bonus_Points}` : ''}) • Attempted: ${sub.Total_Attempted} (${sub.Accuracy_Percent}%) • Time: ${sub.Time_Taken_Sec}s
               </p>
               ${sub.Timestamp ? `<p class="text-[10px] text-slate-500 font-mono">🕒 ${escapeHtml(formatEstTimestamp(sub))}</p>` : ''}
             </div>
@@ -4672,11 +5310,12 @@
               </div>
             `;
           }
+          const totalPts = winner.Total_Score !== undefined ? winner.Total_Score : (Number(winner.Correct_Score || 0) + Number(winner.Bonus_Points || 0));
           return `
             <div class="rounded-xl p-3 border-2 ${meta.bg} space-y-0.5">
               <p class="text-xs font-black uppercase">${meta.place}</p>
               <p class="text-base font-black truncate">${escapeHtml(winner.Participant_Name)}</p>
-              <p class="text-xs font-bold">${winner.Correct_Score} pts (${winner.Accuracy_Percent}%) in ${winner.Time_Taken_Sec}s</p>
+              <p class="text-xs font-bold">${totalPts} pts${winner.Bonus_Points ? ` (${winner.Correct_Score} + ${winner.Bonus_Points} bonus)` : ''} • ${winner.Accuracy_Percent}% in ${winner.Time_Taken_Sec}s</p>
               <p class="text-[11px] opacity-80 truncate">${escapeHtml(winner.Family_or_Phone || '')}</p>
             </div>
           `;

@@ -21,6 +21,8 @@ const TAB_ROSTER = 'Roster_Saints_Kids';
 const TAB_SCORES = 'Quiz_Participants_Scores';
 const TAB_DASHBOARD = 'Live_Leaderboard_And_Kid_Stats';
 const TAB_NOTIFICATIONS = 'Parish_Notifications';
+const TAB_BONUS_QUESTIONS = 'Bonus_Questions';
+const TAB_BONUS_LOGS = 'Bonus_Question_Logs';
 
 const NOTIFICATION_HEADERS = [
   'Notification_ID',
@@ -28,6 +30,183 @@ const NOTIFICATION_HEADERS = [
   'Message',
   'Sender',
   'Status'
+];
+
+const BONUS_QUESTION_HEADERS = [
+  'Question_ID',
+  'Question_Text',
+  'Option_A',
+  'Option_B',
+  'Option_C',
+  'Option_D',
+  'Correct_Answer',
+  'Status'
+];
+
+const BONUS_LOG_HEADERS = [
+  'Log_ID',
+  'Timestamp',
+  'Participant_Name',
+  'Family_or_Phone',
+  'Question_ID',
+  'Question_Text',
+  'Selected_Option',
+  'Is_Correct',
+  'Bonus_Points_Earned',
+  'Cumulative_Bonus_Points'
+];
+
+const DEFAULT_BONUS_QUESTIONS = [
+  {
+    Question_ID: 'BONUS-001',
+    Question_Text: 'In Catholic tradition, how many Holy Sacraments are instituted by Christ?',
+    Option_A: '7 Sacraments',
+    Option_B: '3 Sacraments',
+    Option_C: '10 Sacraments',
+    Option_D: '12 Sacraments',
+    Correct_Answer: '7 Sacraments',
+    Status: 'ACTIVE'
+  },
+  {
+    Question_ID: 'BONUS-002',
+    Question_Text: 'Which liturgical color is traditionally worn by priests during Ordinary Time?',
+    Option_A: 'Green',
+    Option_B: 'Red',
+    Option_C: 'Purple',
+    Option_D: 'White',
+    Correct_Answer: 'Green',
+    Status: 'ACTIVE'
+  },
+  {
+    Question_ID: 'BONUS-003',
+    Question_Text: 'What is the very first book of the Holy Bible?',
+    Option_A: 'Genesis',
+    Option_B: 'Exodus',
+    Option_C: 'Matthew',
+    Option_D: 'Psalms',
+    Correct_Answer: 'Genesis',
+    Status: 'ACTIVE'
+  },
+  {
+    Question_ID: 'BONUS-004',
+    Question_Text: 'What do the four candles on an Advent wreath symbolize?',
+    Option_A: 'The four weeks of Advent waiting for Christ',
+    Option_B: 'The four Gospel Evangelists',
+    Option_C: 'The four seasons of the year',
+    Option_D: 'The four cardinal virtues',
+    Correct_Answer: 'The four weeks of Advent waiting for Christ',
+    Status: 'ACTIVE'
+  },
+  {
+    Question_ID: 'BONUS-005',
+    Question_Text: 'Which prayer did Jesus Himself teach His disciples in the Gospels?',
+    Option_A: 'The Lord\'s Prayer (Our Father)',
+    Option_B: 'The Hail Mary',
+    Option_C: 'The Apostles\' Creed',
+    Option_D: 'The Glory Be',
+    Correct_Answer: 'The Lord\'s Prayer (Our Father)',
+    Status: 'ACTIVE'
+  },
+  {
+    Question_ID: 'BONUS-006',
+    Question_Text: 'On what date does the Catholic Church celebrate All Saints\' Day every year?',
+    Option_A: 'November 1st',
+    Option_B: 'October 31st',
+    Option_C: 'December 25th',
+    Option_D: 'January 1st',
+    Correct_Answer: 'November 1st',
+    Status: 'ACTIVE'
+  },
+  {
+    Question_ID: 'BONUS-007',
+    Question_Text: 'To which Apostle did Jesus say, "You are Peter, and upon this rock I will build my Church"?',
+    Option_A: 'Saint Peter',
+    Option_B: 'Saint Paul',
+    Option_C: 'Saint John',
+    Option_D: 'Saint Andrew',
+    Correct_Answer: 'Saint Peter',
+    Status: 'ACTIVE'
+  },
+  {
+    Question_ID: 'BONUS-008',
+    Question_Text: 'How many decades are prayed in one standard mystery of the Holy Rosary?',
+    Option_A: '5 decades',
+    Option_B: '3 decades',
+    Option_C: '7 decades',
+    Option_D: '10 decades',
+    Correct_Answer: '5 decades',
+    Status: 'ACTIVE'
+  },
+  {
+    Question_ID: 'BONUS-009',
+    Question_Text: 'Which liturgical season of prayer and fasting directly precedes Easter?',
+    Option_A: 'Lent',
+    Option_B: 'Advent',
+    Option_C: 'Ordinary Time',
+    Option_D: 'Christmastide',
+    Correct_Answer: 'Lent',
+    Status: 'ACTIVE'
+  },
+  {
+    Question_ID: 'BONUS-010',
+    Question_Text: 'What gift of the Holy Spirit helps us judge rightly between good and evil in God\'s light?',
+    Option_A: 'Wisdom',
+    Option_B: 'Courage',
+    Option_C: 'Piety',
+    Option_D: 'Knowledge',
+    Correct_Answer: 'Wisdom',
+    Status: 'ACTIVE'
+  },
+  {
+    Question_ID: 'BONUS-011',
+    Question_Text: 'Which Archangel greeted the Blessed Virgin Mary at the Annunciation?',
+    Option_A: 'Archangel Gabriel',
+    Option_B: 'Archangel Michael',
+    Option_C: 'Archangel Raphael',
+    Option_D: 'Archangel Uriel',
+    Correct_Answer: 'Archangel Gabriel',
+    Status: 'ACTIVE'
+  },
+  {
+    Question_ID: 'BONUS-012',
+    Question_Text: 'What is the sacred vessel in church where the Blessed Sacrament is reserved called?',
+    Option_A: 'Tabernacle',
+    Option_B: 'Altar',
+    Option_C: 'Ambo',
+    Option_D: 'Chalice',
+    Correct_Answer: 'Tabernacle',
+    Status: 'ACTIVE'
+  },
+  {
+    Question_ID: 'BONUS-013',
+    Question_Text: 'How many days did Jesus fast in the desert before beginning His public ministry?',
+    Option_A: '40 days',
+    Option_B: '12 days',
+    Option_C: '7 days',
+    Option_D: '3 days',
+    Correct_Answer: '40 days',
+    Status: 'ACTIVE'
+  },
+  {
+    Question_ID: 'BONUS-014',
+    Question_Text: 'Which of the four Gospel writers was a physician and companion of Saint Paul?',
+    Option_A: 'Saint Luke',
+    Option_B: 'Saint Matthew',
+    Option_C: 'Saint Mark',
+    Option_D: 'Saint John',
+    Correct_Answer: 'Saint Luke',
+    Status: 'ACTIVE'
+  },
+  {
+    Question_ID: 'BONUS-015',
+    Question_Text: 'What feast day immediately follows All Saints\' Day on November 2nd?',
+    Option_A: 'All Souls\' Day',
+    Option_B: 'Feast of Christ the King',
+    Option_C: 'Epiphany',
+    Option_D: 'Pentecost',
+    Correct_Answer: 'All Souls\' Day',
+    Status: 'ACTIVE'
+  }
 ];
 
 /**
@@ -80,7 +259,9 @@ function readAppConfigFromSheet(ss) {
     option2_SaintToKid: true,
     requireSecretPin: false,
     eventStatus: 'RUNNING',
-    eventEndTime: 0
+    eventEndTime: 0,
+    bonusQuestionsEnabled: true,
+    bonusPointsPerQuestion: 5
   };
   try {
     const props = PropertiesService.getScriptProperties();
@@ -92,10 +273,12 @@ function readAppConfigFromSheet(ss) {
       defaultCfg.requireSecretPin = Boolean(parsed.requireSecretPin);
       if (parsed.eventStatus) defaultCfg.eventStatus = String(parsed.eventStatus).toUpperCase();
       if (parsed.eventEndTime !== undefined) defaultCfg.eventEndTime = Number(parsed.eventEndTime) || 0;
+      if (parsed.bonusQuestionsEnabled !== undefined) defaultCfg.bonusQuestionsEnabled = Boolean(parsed.bonusQuestionsEnabled);
+      if (parsed.bonusPointsPerQuestion !== undefined) defaultCfg.bonusPointsPerQuestion = Number(parsed.bonusPointsPerQuestion) || 5;
     }
     const dashSheet = ss ? ss.getSheetByName(TAB_DASHBOARD) : null;
     if (dashSheet) {
-      const cfgValues = dashSheet.getRange('M3:N7').getValues();
+      const cfgValues = dashSheet.getRange('M3:N9').getValues();
       if (cfgValues[0] && cfgValues[0][0] === 'option1_KidToSaint' && cfgValues[0][1] !== '') {
         defaultCfg.option1_KidToSaint = String(cfgValues[0][1]).toLowerCase() !== 'false';
       }
@@ -111,6 +294,12 @@ function readAppConfigFromSheet(ss) {
       if (cfgValues[4] && cfgValues[4][0] === 'eventEndTime' && cfgValues[4][1] !== '') {
         defaultCfg.eventEndTime = Number(cfgValues[4][1]) || 0;
       }
+      if (cfgValues[5] && cfgValues[5][0] === 'bonusQuestionsEnabled' && cfgValues[5][1] !== '') {
+        defaultCfg.bonusQuestionsEnabled = String(cfgValues[5][1]).toLowerCase() !== 'false';
+      }
+      if (cfgValues[6] && cfgValues[6][0] === 'bonusPointsPerQuestion' && cfgValues[6][1] !== '') {
+        defaultCfg.bonusPointsPerQuestion = Number(cfgValues[6][1]) || 5;
+      }
     }
   } catch (e) {}
   // Ensure at least one option is enabled
@@ -121,7 +310,7 @@ function readAppConfigFromSheet(ss) {
 }
 
 /**
- * Writes App Config to both Live_Leaderboard_And_Kid_Stats (M2:N7) and ScriptProperties
+ * Writes App Config to both Live_Leaderboard_And_Kid_Stats (M2:N9) and ScriptProperties
  */
 function writeAppConfigToSheet(ss, cfg) {
   const cleanCfg = {
@@ -129,7 +318,9 @@ function writeAppConfigToSheet(ss, cfg) {
     option2_SaintToKid: cfg.option2_SaintToKid !== false,
     requireSecretPin: Boolean(cfg.requireSecretPin),
     eventStatus: cfg.eventStatus === 'STOPPED' ? 'STOPPED' : 'RUNNING',
-    eventEndTime: cfg.eventEndTime ? Number(cfg.eventEndTime) : 0
+    eventEndTime: cfg.eventEndTime ? Number(cfg.eventEndTime) : 0,
+    bonusQuestionsEnabled: cfg.bonusQuestionsEnabled !== false,
+    bonusPointsPerQuestion: cfg.bonusPointsPerQuestion ? Number(cfg.bonusPointsPerQuestion) : 5
   };
   if (!cleanCfg.option1_KidToSaint && !cleanCfg.option2_SaintToKid) {
     cleanCfg.option1_KidToSaint = true;
@@ -142,12 +333,14 @@ function writeAppConfigToSheet(ss, cfg) {
   if (dashSheet) {
     dashSheet.getRange('M1').setValue('⚙ APP SETTINGS').setFontWeight('bold');
     dashSheet.getRange('M2:N2').setValues([['Setting_Key', 'Setting_Value']]).setFontWeight('bold').setBackground('#4a1c11').setFontColor('#fde68a');
-    dashSheet.getRange('M3:N7').setValues([
+    dashSheet.getRange('M3:N9').setValues([
       ['option1_KidToSaint', cleanCfg.option1_KidToSaint],
       ['option2_SaintToKid', cleanCfg.option2_SaintToKid],
       ['requireSecretPin', cleanCfg.requireSecretPin],
       ['eventStatus', cleanCfg.eventStatus],
-      ['eventEndTime', cleanCfg.eventEndTime]
+      ['eventEndTime', cleanCfg.eventEndTime],
+      ['bonusQuestionsEnabled', cleanCfg.bonusQuestionsEnabled],
+      ['bonusPointsPerQuestion', cleanCfg.bonusPointsPerQuestion]
     ]);
   }
   return cleanCfg;
@@ -189,7 +382,9 @@ function setupSheetStructure() {
     'Total_Attempted',
     'Accuracy_Percent',
     'Time_Taken_Sec',
-    'Matched_Bib_IDs'
+    'Matched_Bib_IDs',
+    'Bonus_Points',
+    'Total_Score'
   ];
   scoresSheet.getRange(1, 1, 1, scoreHeaders.length)
     .setValues([scoreHeaders])
@@ -205,8 +400,8 @@ function setupSheetStructure() {
   const existingCfg = readAppConfigFromSheet(ss);
   dashSheet.clear();
 
-  dashSheet.getRange('A1').setValue('🏆 TOP 10 PARTICIPANTS (10 PTS/MATCH, -2 PTS CLUE)').setFontWeight('bold').setFontSize(12);
-  const lbHeaders = ['Participant_Name', 'Family_or_Phone', 'Game_Mode', 'Correct_Score', 'Accuracy_Percent', 'Time_Taken_Sec'];
+  dashSheet.getRange('A1').setValue('🏆 TOP 10 PARTICIPANTS (BASE PTS + BONUS TRIVIA PTS)').setFontWeight('bold').setFontSize(12);
+  const lbHeaders = ['Participant_Name', 'Family_or_Phone', 'Game_Mode', 'Base_Points', 'Bonus_Points', 'Total_Score', 'Accuracy_Percent', 'Time_Taken_Sec'];
   dashSheet.getRange(2, 1, 1, lbHeaders.length)
     .setValues([lbHeaders])
     .setFontWeight('bold')
@@ -214,24 +409,24 @@ function setupSheetStructure() {
     .setFontColor('#ffffff');
 
   dashSheet.getRange('A3').setFormula(
-    '=IFERROR(QUERY(Quiz_Participants_Scores!A2:J, "SELECT C, D, E, F, H, I WHERE C IS NOT NULL ORDER BY F DESC, I ASC LIMIT 10", 0), "No submissions yet")'
+    '=IFERROR(QUERY(Quiz_Participants_Scores!A2:L, "SELECT C, D, E, F, K, L, H, I WHERE C IS NOT NULL ORDER BY L DESC, I ASC LIMIT 10", 0), "No submissions yet")'
   );
 
-  dashSheet.getRange('H1').setValue('✞ 100-KID SAINT APPRECIATION COUNTER').setFontWeight('bold').setFontSize(12);
+  dashSheet.getRange('J1').setValue('✞ 100-KID SAINT APPRECIATION COUNTER').setFontWeight('bold').setFontSize(12);
   const kidStatHeaders = ['Bib_Number', 'Kid_Name', 'Saint_Name', 'Times_Identified_By_Community'];
-  dashSheet.getRange(2, 8, 1, kidStatHeaders.length)
+  dashSheet.getRange(2, 10, 1, kidStatHeaders.length)
     .setValues([kidStatHeaders])
     .setFontWeight('bold')
     .setBackground('#6b2818')
     .setFontColor('#fde68a');
 
-  dashSheet.getRange('H3').setFormula('=ARRAYFORMULA(Roster_Saints_Kids!A2:C101)');
+  dashSheet.getRange('J3').setFormula('=ARRAYFORMULA(Roster_Saints_Kids!A2:C101)');
 
   const formulas = [];
   for (let r = 3; r <= 102; r++) {
-    formulas.push([`=IF(H${r}="","",COUNTIF(ARRAYFORMULA(","&Quiz_Participants_Scores!$J$2:$J&","), "*,"&H${r}&",*"))`]);
+    formulas.push([`=IF(J${r}="","",COUNTIF(ARRAYFORMULA(","&Quiz_Participants_Scores!$J$2:$J&","), "*,"&J${r}&",*"))`]);
   }
-  dashSheet.getRange(3, 11, 100, 1).setFormulas(formulas);
+  dashSheet.getRange(3, 13, 100, 1).setFormulas(formulas);
 
   writeAppConfigToSheet(ss, existingCfg);
 
@@ -246,6 +441,48 @@ function setupSheetStructure() {
     .setFontColor('#fde68a');
   notifSheet.setFrozenRows(1);
   notifSheet.autoResizeColumns(1, NOTIFICATION_HEADERS.length);
+
+  // Bonus Questions Bank Sheet
+  let bonusSheet = ss.getSheetByName(TAB_BONUS_QUESTIONS);
+  if (!bonusSheet) {
+    bonusSheet = ss.insertSheet(TAB_BONUS_QUESTIONS);
+  }
+  bonusSheet.getRange(1, 1, 1, BONUS_QUESTION_HEADERS.length)
+    .setValues([BONUS_QUESTION_HEADERS])
+    .setFontWeight('bold')
+    .setBackground('#4a1c11')
+    .setFontColor('#fde68a');
+  bonusSheet.setFrozenRows(1);
+
+  if (bonusSheet.getLastRow() < 2) {
+    const qRows = DEFAULT_BONUS_QUESTIONS.map(function(q) {
+      return [
+        q.Question_ID,
+        q.Question_Text,
+        q.Option_A,
+        q.Option_B,
+        q.Option_C,
+        q.Option_D,
+        q.Correct_Answer,
+        q.Status
+      ];
+    });
+    bonusSheet.getRange(2, 1, qRows.length, BONUS_QUESTION_HEADERS.length).setValues(qRows);
+  }
+  bonusSheet.autoResizeColumns(1, BONUS_QUESTION_HEADERS.length);
+
+  // Bonus Question Logs Sheet
+  let bonusLogsSheet = ss.getSheetByName(TAB_BONUS_LOGS);
+  if (!bonusLogsSheet) {
+    bonusLogsSheet = ss.insertSheet(TAB_BONUS_LOGS);
+  }
+  bonusLogsSheet.getRange(1, 1, 1, BONUS_LOG_HEADERS.length)
+    .setValues([BONUS_LOG_HEADERS])
+    .setFontWeight('bold')
+    .setBackground('#4a1c11')
+    .setFontColor('#fde68a');
+  bonusLogsSheet.setFrozenRows(1);
+  bonusLogsSheet.autoResizeColumns(1, BONUS_LOG_HEADERS.length);
 
   SpreadsheetApp.flush();
 }
@@ -291,10 +528,23 @@ function doGet(e) {
     const appConfig = readAppConfigFromSheet(ss);
 
     allScores.sort(function(a, b) {
-      const scoreDiff = Number(b.Correct_Score || 0) - Number(a.Correct_Score || 0);
+      const scoreA = Number(a.Total_Score !== undefined && a.Total_Score !== '' ? a.Total_Score : (Number(a.Correct_Score || 0) + Number(a.Bonus_Points || 0)));
+      const scoreB = Number(b.Total_Score !== undefined && b.Total_Score !== '' ? b.Total_Score : (Number(b.Correct_Score || 0) + Number(b.Bonus_Points || 0)));
+      const scoreDiff = scoreB - scoreA;
       if (scoreDiff !== 0) return scoreDiff;
       return Number(a.Time_Taken_Sec || 999999) - Number(b.Time_Taken_Sec || 999999);
     });
+
+    let bonusQuestions = [];
+    let bonusSheet = ss.getSheetByName(TAB_BONUS_QUESTIONS);
+    if (bonusSheet && bonusSheet.getLastRow() > 1) {
+      bonusQuestions = readSheetAsObjects(bonusSheet).filter(function(q) {
+        return String(q.Status || 'ACTIVE').toUpperCase() !== 'INACTIVE';
+      });
+    }
+    if (!bonusQuestions || bonusQuestions.length === 0) {
+      bonusQuestions = DEFAULT_BONUS_QUESTIONS;
+    }
 
     let latestNotification = null;
     try {
@@ -340,6 +590,7 @@ function doGet(e) {
       config: appConfig,
       roster: roster,
       leaderboard: allScores.slice(0, 50),
+      bonusQuestions: bonusQuestions,
       latestNotification: latestNotification,
       notifications: allNotifications.slice(-15).reverse()
     });
@@ -438,6 +689,9 @@ function handleWriteAction(action, p) {
     ? sanitizeCellForSheet(p.Timestamp, 35)
     : formatEstDateForSheet(subDate);
 
+  const bonusPoints = Math.max(0, Math.floor(Number(p.Bonus_Points || 0)));
+  const totalScore = pointsScore + bonusPoints;
+
   const rowToAppend = [
     submissionId,
     scoreTimestamp,
@@ -448,7 +702,9 @@ function handleWriteAction(action, p) {
     totalAttempted,
     accuracyPct,
     timeTakenSec,
-    validBibs.join(',')
+    validBibs.join(','),
+    bonusPoints,
+    totalScore
   ];
 
   // Up to 30-second queue wait for high-concurrency bursts (e.g. 100+ simultaneous submissions)
@@ -567,6 +823,51 @@ function handleWriteAction(action, p) {
       return createJsonResponse({
         status: 'success',
         action: 'clearNotification'
+      });
+    }
+
+    // ACTION: RECORD USER'S BONUS QUESTION ANSWER (Real-time tracking to Google Sheet)
+    if (action === 'recordBonusAnswer') {
+      let bonusLogsSheet = ss.getSheetByName(TAB_BONUS_LOGS);
+      if (!bonusLogsSheet) {
+        bonusLogsSheet = ss.insertSheet(TAB_BONUS_LOGS);
+        bonusLogsSheet.getRange(1, 1, 1, BONUS_LOG_HEADERS.length)
+          .setValues([BONUS_LOG_HEADERS])
+          .setFontWeight('bold')
+          .setBackground('#4a1c11')
+          .setFontColor('#fde68a');
+        bonusLogsSheet.setFrozenRows(1);
+      }
+
+      const logId = sanitizeCellForSheet(p.Log_ID || ('BLOG-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase()), 40);
+      const timestamp = formatEstDateForSheet(new Date());
+      const participantName = sanitizeCellForSheet(p.Participant_Name || 'Anonymous', 50);
+      const familyOrPhone = sanitizeCellForSheet(p.Family_or_Phone || '', 50);
+      const questionId = sanitizeCellForSheet(p.Question_ID || '', 40);
+      const questionText = sanitizeCellForSheet(p.Question_Text || '', 200);
+      const selectedOption = sanitizeCellForSheet(p.Selected_Option || '', 100);
+      const isCorrect = p.Is_Correct === true || String(p.Is_Correct).toLowerCase() === 'true';
+      const pointsEarned = Number(p.Bonus_Points_Earned || 0);
+      const cumulativeBonus = Number(p.Cumulative_Bonus_Points || 0);
+
+      bonusLogsSheet.appendRow([
+        logId,
+        timestamp,
+        participantName,
+        familyOrPhone,
+        questionId,
+        questionText,
+        selectedOption,
+        isCorrect ? 'CORRECT' : 'INCORRECT',
+        pointsEarned,
+        cumulativeBonus
+      ]);
+
+      lock.releaseLock();
+      return createJsonResponse({
+        status: 'success',
+        action: 'recordBonusAnswer',
+        logId: logId
       });
     }
 
@@ -691,6 +992,8 @@ function handleWriteAction(action, p) {
       status: 'success',
       submissionId: submissionId,
       correctScore: pointsScore,
+      bonusPoints: bonusPoints,
+      totalScore: totalScore,
       timeTaken: timeTakenSec
     });
   } catch (err) {
@@ -728,7 +1031,9 @@ function readSheetAsObjects(sheet) {
 function calculateParticipantRank(sheetValues, myScore, myTime) {
   let rank = 1;
   for (let i = 1; i < sheetValues.length; i++) {
-    const rowScore = Number(sheetValues[i][5] || 0);
+    const rowScore = sheetValues[i][11] !== undefined && sheetValues[i][11] !== ''
+      ? Number(sheetValues[i][11] || 0)
+      : (Number(sheetValues[i][5] || 0) + Number(sheetValues[i][10] || 0));
     const rowTime = Number(sheetValues[i][8] || 999999);
     if (rowScore > myScore || (rowScore === myScore && rowTime < myTime)) {
       rank++;
