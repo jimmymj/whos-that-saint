@@ -532,7 +532,7 @@
                 class="flex-1 min-h-[40px] px-2.5 rounded-lg bg-white text-royal-950 font-mono font-bold text-xs border border-amber-300" />
               <button type="button" onclick="adminApplyClockEndTime()"
                 class="min-h-[40px] px-3 rounded-lg bg-amber-400 hover:bg-amber-300 text-royal-950 font-black text-xs active:scale-[0.98]">
-                Set Clock Time
+                Set Clock Time (EST)
               </button>
               <button type="button" onclick="adminClearEndTime()"
                 class="min-h-[40px] px-2.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold text-xs active:scale-[0.98]">
@@ -1721,6 +1721,69 @@
       return `#${hex.slice(0, 8)}-${hex.slice(8, 12)}`;
     }
 
+    /**
+     * Eastern Standard Time (EST/EDT) Constants & Formatting Helpers
+     * Ensures all participant quiz submissions, admin broadcasts, and clock displays
+     * are precisely aligned with America/New_York (EST/EDT) time.
+     */
+    const TIMEZONE_EST = 'America/New_York';
+
+    function getNowEstTimestamp() {
+      const d = new Date();
+      try {
+        const parts = new Intl.DateTimeFormat('en-US', {
+          timeZone: TIMEZONE_EST,
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false
+        }).formatToParts(d);
+        const m = {};
+        parts.forEach(p => m[p.type] = p.value);
+        return `${m.year}-${m.month}-${m.day} ${m.hour}:${m.minute}:${m.second} EST`;
+      } catch (e) {
+        return d.toISOString().replace('T', ' ').substring(0, 19) + ' EST';
+      }
+    }
+
+    function formatEstTimestamp(ts) {
+      if (!ts) return '';
+      if (typeof ts === 'string' && ts.endsWith(' EST')) {
+        return ts;
+      }
+      try {
+        let d;
+        if (typeof ts === 'string') {
+          const s = ts.trim();
+          d = new Date(s);
+          if (isNaN(d.getTime())) {
+            d = new Date(s.replace(/-/g, '/'));
+          }
+        } else {
+          d = new Date(ts);
+        }
+        if (isNaN(d.getTime())) return String(ts);
+        const parts = new Intl.DateTimeFormat('en-US', {
+          timeZone: TIMEZONE_EST,
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false
+        }).formatToParts(d);
+        const m = {};
+        parts.forEach(p => m[p.type] = p.value);
+        return `${m.year}-${m.month}-${m.day} ${m.hour}:${m.minute}:${m.second} EST`;
+      } catch (e) {
+        return String(ts);
+      }
+    }
+
     let appState = {
       currentView: 'registration',
       selectedOption: 'Find Saint by Kid Name', // 'Find Saint by Kid Name' | 'Find Kid by Saint Name'
@@ -2899,12 +2962,12 @@
 
       const timeTaken = Math.max(1, Math.floor((Date.now() - appState.session.startTimeMs) / 1000));
       const accuracy = Number(((appState.session.correctMatches / appState.session.totalAttempted) * 100).toFixed(1));
-      const nowIso = new Date().toISOString().replace('T', ' ').substring(0, 19);
+      const nowEst = getNowEstTimestamp();
       const submissionId = `SUB-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
 
       const record = {
         Submission_ID: submissionId,
-        Timestamp: nowIso,
+        Timestamp: nowEst,
         Participant_Name: sanitizeForSheet(appState.session.participantName),
         Family_or_Phone: sanitizeForSheet(appState.session.familyOrPhone || ''),
         Game_Mode: appState.session.gameMode,
@@ -3539,8 +3602,17 @@
 
     function formatClockTime(timestamp) {
       if (!timestamp) return '';
-      const d = new Date(timestamp);
-      return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+      try {
+        const d = new Date(timestamp);
+        if (isNaN(d.getTime())) return '';
+        return d.toLocaleTimeString('en-US', {
+          timeZone: TIMEZONE_EST,
+          hour: 'numeric',
+          minute: '2-digit'
+        }) + ' EST';
+      } catch (e) {
+        return new Date(timestamp).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) + ' EST';
+      }
     }
 
     function renderEventStatusAndTimerUI() {
@@ -3751,10 +3823,21 @@
 
       const picker = document.getElementById('inputAdminEndTimePicker');
       if (picker) {
-        const d = new Date(endTime);
-        const hh = String(d.getHours()).padStart(2, '0');
-        const mm = String(d.getMinutes()).padStart(2, '0');
-        picker.value = `${hh}:${mm}`;
+        try {
+          const parts = new Intl.DateTimeFormat('en-US', {
+            timeZone: TIMEZONE_EST,
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+          }).formatToParts(new Date(endTime));
+          const m = {};
+          parts.forEach(p => m[p.type] = p.value);
+          const hh = m.hour === '24' ? '00' : m.hour;
+          picker.value = `${hh}:${m.minute}`;
+        } catch (e) {
+          const d = new Date(endTime);
+          picker.value = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+        }
       }
 
       saveAdminEventStatusAndCloud(true);
@@ -3768,17 +3851,53 @@
         return;
       }
       const [hours, minutes] = picker.value.split(':').map(Number);
-      const target = new Date();
-      target.setHours(hours, minutes, 0, 0);
 
-      if (target.getTime() <= Date.now()) {
-        target.setDate(target.getDate() + 1);
+      const now = new Date();
+      let targetEpoch;
+      try {
+        const parts = new Intl.DateTimeFormat('en-US', {
+          timeZone: TIMEZONE_EST,
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit'
+        }).formatToParts(now);
+        const m = {};
+        parts.forEach(p => m[p.type] = p.value);
+        const y = parseInt(m.year, 10);
+        const mo = parseInt(m.month, 10) - 1;
+        const d = parseInt(m.day, 10);
+
+        // Approximate UTC epoch for America/New_York (UTC-5 or UTC-4)
+        let guess = new Date(Date.UTC(y, mo, d, hours + 5, minutes, 0));
+        const guessParts = new Intl.DateTimeFormat('en-US', {
+          timeZone: TIMEZONE_EST,
+          hour: 'numeric',
+          minute: 'numeric',
+          hour12: false
+        }).formatToParts(guess);
+        const gm = {};
+        guessParts.forEach(p => gm[p.type] = p.value);
+        const diffHours = hours - parseInt(gm.hour, 10);
+        const diffMins = minutes - parseInt(gm.minute, 10);
+        guess = new Date(guess.getTime() + (diffHours * 60 + diffMins) * 60000);
+
+        if (guess.getTime() <= now.getTime()) {
+          guess = new Date(guess.getTime() + 24 * 60 * 60 * 1000);
+        }
+        targetEpoch = guess.getTime();
+      } catch (e) {
+        const target = new Date();
+        target.setHours(hours, minutes, 0, 0);
+        if (target.getTime() <= Date.now()) {
+          target.setDate(target.getDate() + 1);
+        }
+        targetEpoch = target.getTime();
       }
 
       appState.settings.eventStatus = 'RUNNING';
-      appState.settings.eventEndTime = target.getTime();
+      appState.settings.eventEndTime = targetEpoch;
       saveAdminEventStatusAndCloud(true);
-      showToast(`Event set to close at ${formatClockTime(target.getTime())}!`, "success");
+      showToast(`Event set to close at ${formatClockTime(targetEpoch)}!`, "success");
     }
 
     function adminClearEndTime() {
@@ -3872,9 +3991,22 @@
     function formatNotifTime(ts) {
       if (!ts) return "Just now";
       try {
-        const d = new Date(String(ts).replace(/-/g, '/'));
+        let d;
+        if (typeof ts === 'string') {
+          const s = ts.trim();
+          d = new Date(s);
+          if (isNaN(d.getTime())) {
+            d = new Date(s.replace(/-/g, '/'));
+          }
+        } else {
+          d = new Date(ts);
+        }
         if (isNaN(d.getTime())) return String(ts);
-        return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+        return d.toLocaleTimeString('en-US', {
+          timeZone: TIMEZONE_EST,
+          hour: 'numeric',
+          minute: '2-digit'
+        }) + ' EST';
       } catch (e) {
         return String(ts);
       }
@@ -3910,11 +4042,11 @@
       }
 
       const notifId = `NOTIF-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
-      const nowIso = new Date().toISOString().replace('T', ' ').substring(0, 19);
+      const nowEst = getNowEstTimestamp();
 
       const notifPayload = {
         Notification_ID: notifId,
-        Timestamp: nowIso,
+        Timestamp: nowEst,
         Message: rawMsg,
         Sender: rawSender,
         Status: 'ACTIVE'
@@ -3933,7 +4065,7 @@
       const res = await sendCloudWriteRequest('sendNotification', notifPayload);
 
       if (res && res.ok) {
-        if (statusEl) statusEl.innerHTML = `<span class="text-emerald-700 font-extrabold">✓ Successfully broadcasted &amp; saved to Google Sheet at ${new Date().toLocaleTimeString()}!</span>`;
+        if (statusEl) statusEl.innerHTML = `<span class="text-emerald-700 font-extrabold">✓ Successfully broadcasted &amp; saved to Google Sheet at ${formatClockTime(Date.now())}!</span>`;
         showToast("📢 Broadcast Notification sent to all parishioners!", "success");
         if (input) input.value = '';
         const count = document.getElementById('notifCharCount');
@@ -3987,7 +4119,7 @@
           <div class="p-2 rounded-lg bg-white border border-amber-300/80 shadow-xs space-y-1">
             <div class="flex items-center justify-between text-[11px] gap-2">
               <span class="font-extrabold text-royal-900">${escapeHtml(item.Sender || 'Parish Admin')} ${badge}</span>
-              <span class="text-[10px] text-slate-500 font-mono">${escapeHtml(item.Timestamp || '')}</span>
+              <span class="text-[10px] text-slate-500 font-mono">${escapeHtml(formatEstTimestamp(item.Timestamp || ''))}</span>
             </div>
             <p class="text-xs font-bold text-slate-800 leading-snug">${escapeHtml(item.Message || '')}</p>
           </div>
@@ -4430,6 +4562,7 @@
               <p class="text-[11px] text-slate-600 font-medium">
                 ${escapeHtml(sub.Game_Mode)} • <strong>${sub.Correct_Score} pts</strong> • Attempted: ${sub.Total_Attempted} (${sub.Accuracy_Percent}%) • Time: ${sub.Time_Taken_Sec}s
               </p>
+              ${sub.Timestamp ? `<p class="text-[10px] text-slate-500 font-mono">🕒 ${escapeHtml(formatEstTimestamp(sub.Timestamp))}</p>` : ''}
             </div>
             <span class="px-2 py-1 rounded-lg font-extrabold shrink-0 ${isSynced ? 'bg-emerald-100 text-emerald-900' : 'bg-amber-100 text-amber-900'}">
               ${isSynced ? '☁ Cloud' : '💾 Local'}

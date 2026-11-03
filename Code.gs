@@ -30,6 +30,19 @@ const NOTIFICATION_HEADERS = [
   'Status'
 ];
 
+/**
+ * Eastern Standard Time (EST/EDT) Helper for all sheet records
+ */
+const TIMEZONE_EST = 'America/New_York';
+
+function formatEstDateForSheet(d) {
+  try {
+    return Utilities.formatDate(d || new Date(), TIMEZONE_EST, 'yyyy-MM-dd HH:mm:ss') + ' EST';
+  } catch (e) {
+    return Utilities.formatDate(d || new Date(), 'GMT-5', 'yyyy-MM-dd HH:mm:ss') + ' EST';
+  }
+}
+
 const ROSTER_HEADERS = [
   'Bib_Number',
   'Kid_Name',
@@ -303,7 +316,7 @@ function doGet(e) {
 
     return createJsonResponse({
       status: 'success',
-      timestamp: new Date().toISOString(),
+      timestamp: formatEstDateForSheet(new Date()),
       config: appConfig,
       roster: roster,
       leaderboard: allScores.slice(0, 50),
@@ -365,7 +378,7 @@ function handleWriteAction(action, p) {
     return createJsonResponse({
       status: 'success',
       pong: true,
-      timestamp: new Date().toISOString()
+      timestamp: formatEstDateForSheet(new Date())
     });
   }
 
@@ -395,7 +408,7 @@ function handleWriteAction(action, p) {
 
   const rowToAppend = [
     submissionId,
-    sanitizeCellForSheet(p.Timestamp || Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss'), 30),
+    sanitizeCellForSheet(p.Timestamp || formatEstDateForSheet(new Date()), 35),
     cleanName,
     sanitizeCellForSheet(p.Family_or_Phone || '', 60),
     sanitizeCellForSheet(p.Game_Mode || 'Find Saint by Kid Name', 40),
@@ -471,7 +484,7 @@ function handleWriteAction(action, p) {
       }
 
       const notifId = sanitizeCellForSheet(p.Notification_ID || ('NOTIF-' + new Date().getTime() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase()), 50);
-      const timestamp = sanitizeCellForSheet(p.Timestamp || Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss'), 30);
+      const timestamp = sanitizeCellForSheet(p.Timestamp || formatEstDateForSheet(new Date()), 35);
       const message = sanitizeCellForSheet(p.Message || '', 500);
       const sender = sanitizeCellForSheet(p.Sender || 'Parish Admin', 60);
       const status = 'ACTIVE';
@@ -657,8 +670,12 @@ function readSheetAsObjects(sheet) {
     const rowObj = {};
     let hasContent = false;
     for (let c = 0; c < headers.length; c++) {
-      rowObj[headers[c]] = values[r][c];
-      if (values[r][c] !== '' && values[r][c] !== null) {
+      let cellVal = values[r][c];
+      if (cellVal instanceof Date) {
+        cellVal = formatEstDateForSheet(cellVal);
+      }
+      rowObj[headers[c]] = cellVal;
+      if (cellVal !== '' && cellVal !== null && cellVal !== undefined) {
         hasContent = true;
       }
     }
