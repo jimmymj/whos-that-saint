@@ -958,6 +958,20 @@ function handleWriteAction(action, p) {
     }
 
     // Default: submitScore
+    // Verify Event is open for official score submission (grace period of 75 seconds allowed for active players auto-submitting)
+    const currentConfig = readAppConfigFromSheet(ss);
+    const nowMs = Date.now();
+    const hasGracePeriod = currentConfig.eventEndTime > 0 && nowMs <= (currentConfig.eventEndTime + 75000);
+    const isEventClosed = (currentConfig.eventStatus === 'STOPPED' && !hasGracePeriod) || (currentConfig.eventEndTime > 0 && nowMs > (currentConfig.eventEndTime + 75000));
+    if (isEventClosed) {
+      lock.releaseLock();
+      return createJsonResponse({
+        status: 'error',
+        code: 'EVENT_CLOSED',
+        message: 'The parish event is closed. Official score submissions are disabled. Users may play in Practice & Learn Mode.'
+      });
+    }
+
     // Ultra-fast critical section: Read only Columns A to C (Submission_ID, Timestamp, Participant_Name)
     const lastRow = scoresSheet.getLastRow();
     if (lastRow > 1) {

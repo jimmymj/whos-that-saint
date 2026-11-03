@@ -295,6 +295,17 @@
          VIEW 2A: 100-KID BIB # & NAME FINDER GRID
          ========================================== -->
     <section id="viewBibExplorer" class="hidden w-full space-y-2.5">
+      <!-- Practice & Learn Mode Banner (When event is closed) -->
+      <div id="bibPracticeModeBanner" class="hidden w-full rounded-xl p-2.5 bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 text-white border-2 border-amber-300 shadow-sm flex items-center justify-between gap-2 text-xs">
+        <div class="flex items-center gap-2 min-w-0">
+          <span class="text-base shrink-0">📖</span>
+          <span class="font-black truncate">Practice &amp; Learn Mode (Event Closed — Free Play, No Prizes)</span>
+        </div>
+        <button type="button" onclick="showLeaderboardView()" class="px-2.5 py-1 rounded-lg bg-white hover:bg-amber-100 text-royal-950 font-black text-[11px] shrink-0 active:scale-[0.98]">
+          🏆 Leaderboard
+        </button>
+      </div>
+
       <!-- Sticky Search & Quick Filter Bar inside Scroll Viewport -->
       <div class="sticky top-0 z-20 bg-liturgical-cream/95 backdrop-blur pb-1.5 space-y-1.5">
         <div class="w-full rounded-2xl p-2.5 bg-white border-2 border-amber-400/80 shadow-sm space-y-2">
@@ -419,6 +430,53 @@
         <p class="text-[11px] text-slate-500 font-semibold text-center">
           🔒 Individual correct answers are kept hidden so fellow parishioners can continue hunting fairly!
         </p>
+      </div>
+
+      <!-- Practice & Learn Summary Card (When played while Event is Closed) -->
+      <div id="practiceResultCard" class="hidden w-full rounded-xl p-3.5 bg-gradient-to-br from-amber-50 via-orange-50 to-amber-100 border-2 border-amber-400 shadow-md space-y-2.5">
+        <div class="flex items-center justify-between border-b border-amber-300/80 pb-2">
+          <div>
+            <span class="inline-flex items-center gap-1 text-[11px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-200 text-royal-950 border border-amber-400">
+              📖 Practice &amp; Learn Mode (Free Play)
+            </span>
+            <h2 id="practicePlayerName" class="text-lg font-black text-royal-900 mt-1">Player Name</h2>
+          </div>
+          <span class="px-2.5 py-1 rounded-lg text-xs font-extrabold bg-slate-200 text-slate-800 border border-slate-300">
+            Unranked / No Prizes
+          </span>
+        </div>
+
+        <div class="grid grid-cols-3 gap-2 text-center">
+          <div class="bg-white rounded-xl p-2 border border-amber-200 shadow-sm">
+            <p class="text-[11px] font-bold text-slate-500 uppercase">Correct Matches</p>
+            <p id="practiceCorrectStat" class="text-xl font-black text-royal-900">0 / 0</p>
+            <p id="practiceBonusStat" class="text-[10px] font-bold text-amber-700 hidden">+0 bonus trivia</p>
+          </div>
+          <div class="bg-white rounded-xl p-2 border border-amber-200 shadow-sm">
+            <p class="text-[11px] font-bold text-slate-500 uppercase">Accuracy</p>
+            <p id="practiceAccuracyStat" class="text-xl font-black text-emerald-700">0%</p>
+          </div>
+          <div class="bg-white rounded-xl p-2 border border-amber-200 shadow-sm">
+            <p class="text-[11px] font-bold text-slate-500 uppercase">Time Spent</p>
+            <p id="practiceTimeStat" class="text-xl font-black text-amber-600">0s</p>
+          </div>
+        </div>
+
+        <div class="rounded-xl p-2.5 bg-royal-900 text-white text-xs space-y-1">
+          <p class="font-extrabold text-amber-300">✨ Event Closed Notice:</p>
+          <p class="text-slate-200 leading-snug">Because the official parish event has closed, this practice session was not submitted to the cloud leaderboard and is not eligible for prizes. Thank you for exploring and learning about our holy Saints!</p>
+        </div>
+
+        <div class="flex items-center gap-2 pt-0.5">
+          <button type="button" onclick="startActivityFromRegistration()"
+            class="flex-1 min-h-[42px] px-3 rounded-xl bg-amber-400 hover:bg-amber-300 text-royal-950 font-black text-xs shadow active:scale-[0.98]">
+            🔄 Practice Again
+          </button>
+          <button type="button" onclick="showLeaderboardView()"
+            class="min-h-[42px] px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-xs border border-slate-300 active:scale-[0.98]">
+            🏆 View Official Winners
+          </button>
+        </div>
       </div>
 
       <!-- Top 10 Leaderboard Card -->
@@ -2143,6 +2201,13 @@
       const warningEl = document.getElementById('duplicateNameWarning');
       if (!nameInput || !warningEl) return false;
 
+      // In practice mode (event closed), duplicate names are permitted so players can replay and learn
+      if (!isEventCurrentlyOpen()) {
+        warningEl.classList.add('hidden');
+        nameInput.classList.remove('border-red-600');
+        return false;
+      }
+
       const candidate = nameInput.value.trim();
       const isDup = isDuplicateParticipantName(candidate);
       if (isDup) {
@@ -2484,6 +2549,12 @@
       }
 
       if (viewName === 'bibExplorer') {
+        const isPractice = Boolean(appState.session.isPracticeMode || !isEventCurrentlyOpen());
+        const practiceBanner = document.getElementById('bibPracticeModeBanner');
+        if (practiceBanner) {
+          if (isPractice) practiceBanner.classList.remove('hidden');
+          else practiceBanner.classList.add('hidden');
+        }
         renderBibGrid();
       } else if (viewName === 'results') {
         renderLeaderboardAndAppreciation();
@@ -2527,23 +2598,37 @@
           `;
         } else {
           container.innerHTML = `
-            <button type="button" onclick="showLeaderboardView()"
-              class="w-full min-h-[50px] rounded-xl bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-amber-300 border border-amber-400/50 font-black text-sm shadow-md active:scale-[0.99] flex items-center justify-center gap-2">
-              <span>🔴</span> <span>Event Closed — View Leaderboard &amp; Winners</span>
-            </button>
+            <div class="flex items-center gap-2 w-full">
+              <button type="button" onclick="startActivityFromRegistration()"
+                class="flex-1 min-h-[50px] rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-royal-950 font-black text-xs sm:text-sm shadow-md active:scale-[0.99] flex items-center justify-center gap-1.5 border border-amber-300">
+                <span>📖</span> <span>Play Practice &amp; Learn →</span>
+              </button>
+              <button type="button" onclick="showLeaderboardView()"
+                class="w-auto px-3.5 min-h-[50px] rounded-xl bg-slate-900 text-amber-300 border border-slate-700 font-extrabold text-xs shadow-md active:scale-[0.99] flex items-center justify-center gap-1 shrink-0">
+                <span>🏆</span> <span>Leaderboard</span>
+              </button>
+            </div>
           `;
         }
       } else if (view === 'bibExplorer') {
         const count = appState.session.totalAttempted;
+        const isPractice = Boolean(appState.session.isPracticeMode || !isEventCurrentlyOpen());
+        const submitBtnHtml = isPractice
+          ? `<button type="button" onclick="finishPracticeSession()"
+              class="w-2/3 min-h-[50px] rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-royal-950 font-black text-xs sm:text-sm whitespace-nowrap px-3 shadow-md active:scale-[0.98] border border-amber-300">
+              📖 Finish Practice (${count} Learned)
+            </button>`
+          : `<button type="button" onclick="finishAndSubmitScore()"
+              class="w-2/3 min-h-[50px] rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-sm sm:text-base whitespace-nowrap px-3 shadow-md active:scale-[0.98]">
+              ✓ Submit Score (${count} Found)
+            </button>`;
+
         container.innerHTML = `
           <button type="button" onclick="focusBibSearchInput()"
             class="w-1/3 min-h-[50px] rounded-xl bg-amber-100 text-royal-950 border border-amber-300 font-extrabold text-xs sm:text-sm whitespace-nowrap px-2 active:scale-[0.98]">
             🔍 Search #
           </button>
-          <button type="button" onclick="finishAndSubmitScore()"
-            class="w-2/3 min-h-[50px] rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-black text-sm sm:text-base whitespace-nowrap px-3 shadow-md active:scale-[0.98]">
-            ✓ Submit Score (${count} Found)
-          </button>
+          ${submitBtnHtml}
         `;
       } else if (view === 'questionCard') {
         container.innerHTML = `
@@ -2703,11 +2788,7 @@
     }
 
     function startActivityFromRegistration() {
-      if (!isEventCurrentlyOpen()) {
-        showToast("The parish activity is currently closed. View Leaderboard for results!", "error");
-        showLeaderboardView();
-        return;
-      }
+      const isPractice = !isEventCurrentlyOpen();
       requestMobileFullScreen();
 
       if (appState.roster.length === 0) {
@@ -2736,19 +2817,24 @@
       const rawName = nameInput ? nameInput.value.trim() : '';
       const rawFamily = familyInput ? familyInput.value.trim() : '';
 
-      if (!rawName || rawName.length < 2) {
-        showToast("Please enter your Full Name (at least 2 characters) to begin!", "error");
-        if (nameInput) nameInput.focus();
-        return;
+      // In live competition, enforce name length >= 2 chars and unique participant name
+      if (!isPractice) {
+        if (!rawName || rawName.length < 2) {
+          showToast("Please enter your Full Name (at least 2 characters) to begin!", "error");
+          if (nameInput) nameInput.focus();
+          return;
+        }
+
+        // Enforce Unique Participant Name (no duplicates allowed in official competition)
+        if (isDuplicateParticipantName(rawName)) {
+          checkDuplicateNameLive();
+          showToast(`Duplicate Name: "${rawName}" has already participated! Please enter a unique name.`, "error");
+          if (nameInput) nameInput.focus();
+          return;
+        }
       }
 
-      // Enforce Unique Participant Name (no duplicates allowed)
-      if (isDuplicateParticipantName(rawName)) {
-        checkDuplicateNameLive();
-        showToast(`Duplicate Name: "${rawName}" has already participated! Please enter a unique name.`, "error");
-        if (nameInput) nameInput.focus();
-        return;
-      }
+      const finalPlayerName = rawName || 'Parish Learner';
 
       if (appState.session.timerInterval) {
         clearInterval(appState.session.timerInterval);
@@ -2756,7 +2842,8 @@
 
       appState.session = {
         active: true,
-        participantName: sanitizeForSheet(rawName),
+        isPracticeMode: isPractice,
+        participantName: sanitizeForSheet(finalPlayerName),
         familyOrPhone: sanitizeForSheet(rawFamily),
         gameMode: appState.selectedOption,
         startTimeMs: Date.now(),
@@ -2791,6 +2878,9 @@
       }, 1000);
 
       renderHeaderStatus();
+      if (isPractice) {
+        showToast("📖 Playing in Practice & Learn Mode! (Event Closed — Free play, unranked)", "info");
+      }
       switchView('bibExplorer');
     }
 
@@ -2828,14 +2918,20 @@
       const timerText = document.getElementById('headerTimerText');
 
       if (appState.session.participantName) {
-        const shortMode = appState.session.gameMode === 'Find Saint by Kid Name' ? 'Find Saint by Kid' : 'Find Kid by Saint';
-        playerBadge.textContent = `${appState.session.participantName} • ${shortMode}`;
+        if (appState.session.isPracticeMode) {
+          playerBadge.textContent = `${appState.session.participantName} • 📖 Practice Mode`;
+        } else {
+          const shortMode = appState.session.gameMode === 'Find Saint by Kid Name' ? 'Find Saint by Kid' : 'Find Kid by Saint';
+          playerBadge.textContent = `${appState.session.participantName} • ${shortMode}`;
+        }
       } else {
         playerBadge.textContent = 'Welcome! Enter your name below';
       }
 
       // Do NOT show live points or right/wrong count in header so participants cannot deduce correct answers
-      scoreText.textContent = `${appState.session.totalAttempted} Recorded`;
+      scoreText.textContent = appState.session.isPracticeMode
+        ? `${appState.session.totalAttempted} Explored`
+        : `${appState.session.totalAttempted} Recorded`;
       timerText.textContent = `${appState.session.elapsedSec}s`;
     }
 
@@ -3412,8 +3508,8 @@
       }
       appState.session.bonusQuestionsAttempted = (appState.session.bonusQuestionsAttempted || 0) + 1;
 
-      // 4. Asynchronously log answer to Google Sheet (Bonus_Question_Logs)
-      if (getActiveCloudUrl()) {
+      // 4. Asynchronously log answer to Google Sheet (Bonus_Question_Logs) only during active event
+      if (getActiveCloudUrl() && !appState.session.isPracticeMode && isEventCurrentlyOpen()) {
         sendCloudWriteRequest('recordBonusAnswer', {
           Participant_Name: appState.session.participantName,
           Family_or_Phone: appState.session.familyOrPhone,
@@ -3475,7 +3571,11 @@
       if (unanswered) {
         openQuestionForBib(unanswered.Bib_Number);
       } else {
-        finishAndSubmitScore();
+        if (appState.session.isPracticeMode || !isEventCurrentlyOpen()) {
+          finishPracticeSession();
+        } else {
+          finishAndSubmitScore();
+        }
       }
     }
 
@@ -3490,7 +3590,71 @@
     /**************************************************************
      * 7. FLOW 3: SCORE SUBMISSION, SECURITY & LEADERBOARD
      **************************************************************/
+    function finishPracticeSession() {
+      // 1. Dismiss warning modal & bonus question modal
+      dismissOneMinuteWarningModal();
+      const warningBanner = document.getElementById('activeGameEndingWarningBanner');
+      if (warningBanner) warningBanner.classList.add('hidden');
+      hasShownOneMinuteWarningModal = false;
+
+      if (bonusAutoAdvanceTimer) {
+        clearTimeout(bonusAutoAdvanceTimer);
+        bonusAutoAdvanceTimer = null;
+      }
+      const bonusModal = document.getElementById('modalBonusQuestion');
+      if (bonusModal) bonusModal.classList.add('hidden');
+      appState.session.activeBonusQuestion = null;
+
+      if (appState.session.timerInterval) {
+        clearInterval(appState.session.timerInterval);
+      }
+      appState.session.active = false;
+      appState.session.isAutoSubmitting = false;
+
+      const timeTaken = Math.max(1, Math.floor((Date.now() - appState.session.startTimeMs) / 1000));
+      const accuracy = appState.session.totalAttempted > 0
+        ? Number(((appState.session.correctMatches / appState.session.totalAttempted) * 100).toFixed(1))
+        : 0;
+
+      // 2. Hide official personal card and reveal practice result summary
+      const personalCard = document.getElementById('personalResultCard');
+      if (personalCard) personalCard.classList.add('hidden');
+
+      const practiceCard = document.getElementById('practiceResultCard');
+      if (practiceCard) {
+        practiceCard.classList.remove('hidden');
+        const nameEl = document.getElementById('practicePlayerName');
+        const correctEl = document.getElementById('practiceCorrectStat');
+        const bonusEl = document.getElementById('practiceBonusStat');
+        const accEl = document.getElementById('practiceAccuracyStat');
+        const timeEl = document.getElementById('practiceTimeStat');
+
+        if (nameEl) nameEl.textContent = appState.session.participantName || 'Parish Learner';
+        if (correctEl) correctEl.textContent = `${appState.session.correctMatches} / ${appState.session.totalAttempted}`;
+        if (accEl) accEl.textContent = `${accuracy}%`;
+        if (timeEl) timeEl.textContent = `${timeTaken}s`;
+        if (bonusEl) {
+          if (appState.session.bonusPointsEarned > 0) {
+            bonusEl.textContent = `+${appState.session.bonusPointsEarned} bonus trivia pts`;
+            bonusEl.classList.remove('hidden');
+          } else {
+            bonusEl.classList.add('hidden');
+          }
+        }
+      }
+
+      showToast("Practice Run Finished! Thanks for learning about the Saints!", "success");
+      switchView('results');
+      renderLeaderboardAndAppreciation();
+    }
+
     async function finishAndSubmitScore() {
+      // If event is closed or session is in Practice Mode, divert to finishPracticeSession()
+      if (appState.session.isPracticeMode || !isEventCurrentlyOpen()) {
+        finishPracticeSession();
+        return;
+      }
+
       if (appState.session.totalAttempted === 0) {
         showToast("Record at least 1 Saint match before submitting your activity!", "error");
         return;
@@ -3605,6 +3769,14 @@
         if (result.code === 'DUPLICATE_NAME') {
           updatePersonalSyncBadge('⚠ Duplicate Name Rejected by Cloud', false);
           showToast("Cloud Sheet rejected duplicate participant name!", "error");
+          return false;
+        }
+
+        if (result.code === 'EVENT_CLOSED') {
+          record.Sync_Status = 'Event Closed (Unranked)';
+          saveSubmissionsToStorage();
+          updatePersonalSyncBadge('Event Closed (Unranked)', false);
+          showToast("Event is closed: Score not submitted to leaderboard.", "info");
           return false;
         }
 
@@ -3772,6 +3944,7 @@
 
     function showLeaderboardView() {
       document.getElementById('personalResultCard')?.classList.add('hidden');
+      document.getElementById('practiceResultCard')?.classList.add('hidden');
       switchView('results');
       refreshCloudData(false);
     }
@@ -4288,16 +4461,21 @@
       const bannerEl = document.getElementById('participantEventBanner');
       if (bannerEl) {
         if (!isOpen) {
-          bannerEl.className = "w-full rounded-xl p-3 bg-gradient-to-r from-red-950 via-red-900 to-red-800 border-2 border-red-500 text-white flex flex-col items-center text-center space-y-1 shadow-md transition-all";
+          bannerEl.className = "w-full rounded-xl p-3 bg-gradient-to-r from-royal-950 via-slate-900 to-royal-900 border-2 border-amber-400 text-white flex flex-col items-center text-center space-y-1.5 shadow-md transition-all";
           bannerEl.innerHTML = `
-            <div class="flex items-center gap-1.5 font-black text-sm text-red-200">
-              <span class="w-2.5 h-2.5 rounded-full bg-red-400"></span>
-              <span>Event is Closed</span>
+            <div class="flex items-center gap-2">
+              <span class="px-2 py-0.5 rounded-full bg-red-600 text-white font-black text-[11px] uppercase tracking-wide">Event Closed</span>
+              <span class="font-extrabold text-xs sm:text-sm text-amber-300">📖 Practice &amp; Learn Mode Open</span>
             </div>
-            <p class="text-xs text-red-100 font-medium leading-tight">The All Saints' Day parish activity is currently closed. Thank you for participating!</p>
-            <button type="button" onclick="showLeaderboardView()" class="mt-1 px-3 py-1.5 rounded-lg bg-amber-400 hover:bg-amber-300 text-royal-950 font-black text-xs shadow active:scale-[0.98]">
-              🏆 View Leaderboard &amp; Winners
-            </button>
+            <p class="text-xs text-slate-200 font-medium leading-tight max-w-md">The official competition has concluded. You can freely explore, match Saints, and learn, but submissions are not ranked and no prizes are awarded.</p>
+            <div class="flex items-center gap-2 pt-0.5">
+              <button type="button" onclick="startActivityFromRegistration()" class="px-3.5 py-1.5 rounded-lg bg-amber-400 hover:bg-amber-300 text-royal-950 font-black text-xs shadow active:scale-[0.98]">
+                📖 Play Practice &amp; Learn
+              </button>
+              <button type="button" onclick="showLeaderboardView()" class="px-3 py-1.5 rounded-lg bg-royal-800 hover:bg-royal-700 text-amber-200 font-extrabold text-xs border border-amber-400/40 shadow-sm active:scale-[0.98]">
+                🏆 View Winners
+              </button>
+            </div>
           `;
         } else {
           bannerEl.className = "w-full rounded-xl p-2.5 bg-gradient-to-r from-emerald-950 via-emerald-900 to-emerald-800 border-2 border-emerald-400 text-white flex items-center justify-between gap-2 shadow-sm transition-all";
@@ -4379,7 +4557,7 @@
     }
 
     function checkActiveSessionEventDeadline() {
-      if (!appState.session || !appState.session.active) {
+      if (!appState.session || !appState.session.active || appState.session.isPracticeMode) {
         const banner = document.getElementById('activeGameEndingWarningBanner');
         if (banner) banner.classList.add('hidden');
         dismissOneMinuteWarningModal();
