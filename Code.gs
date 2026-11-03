@@ -20,6 +20,15 @@
 const TAB_ROSTER = 'Roster_Saints_Kids';
 const TAB_SCORES = 'Quiz_Participants_Scores';
 const TAB_DASHBOARD = 'Live_Leaderboard_And_Kid_Stats';
+const TAB_NOTIFICATIONS = 'Parish_Notifications';
+
+const NOTIFICATION_HEADERS = [
+  'Notification_ID',
+  'Timestamp',
+  'Message',
+  'Sender',
+  'Status'
+];
 
 const ROSTER_HEADERS = [
   'Bib_Number',
@@ -213,6 +222,18 @@ function setupSheetStructure() {
 
   writeAppConfigToSheet(ss, existingCfg);
 
+  let notifSheet = ss.getSheetByName(TAB_NOTIFICATIONS);
+  if (!notifSheet) {
+    notifSheet = ss.insertSheet(TAB_NOTIFICATIONS);
+  }
+  notifSheet.getRange(1, 1, 1, NOTIFICATION_HEADERS.length)
+    .setValues([NOTIFICATION_HEADERS])
+    .setFontWeight('bold')
+    .setBackground('#4a1c11')
+    .setFontColor('#fde68a');
+  notifSheet.setFrozenRows(1);
+  notifSheet.autoResizeColumns(1, NOTIFICATION_HEADERS.length);
+
   SpreadsheetApp.flush();
 }
 
@@ -262,12 +283,32 @@ function doGet(e) {
       return Number(a.Time_Taken_Sec || 999999) - Number(b.Time_Taken_Sec || 999999);
     });
 
+    let latestNotification = null;
+    try {
+      const props = PropertiesService.getScriptProperties();
+      const notifJson = props.getProperty('LATEST_NOTIFICATION_JSON');
+      if (notifJson) {
+        latestNotification = JSON.parse(notifJson);
+      }
+    } catch (ne) {}
+
+    let notifSheet = ss.getSheetByName(TAB_NOTIFICATIONS);
+    let allNotifications = [];
+    if (notifSheet && notifSheet.getLastRow() > 1) {
+      allNotifications = readSheetAsObjects(notifSheet);
+      if (!latestNotification && allNotifications.length > 0) {
+        latestNotification = allNotifications[allNotifications.length - 1];
+      }
+    }
+
     return createJsonResponse({
       status: 'success',
       timestamp: new Date().toISOString(),
       config: appConfig,
       roster: roster,
-      leaderboard: allScores.slice(0, 50)
+      leaderboard: allScores.slice(0, 50),
+      latestNotification: latestNotification,
+      notifications: allNotifications.slice(-15).reverse()
     });
   } catch (err) {
     return createJsonResponse({
@@ -413,6 +454,65 @@ function handleWriteAction(action, p) {
       return createJsonResponse({
         status: 'success',
         action: 'clearAllScores'
+      });
+    }
+
+    // ACTION: SEND BROADCAST NOTIFICATION (Store permanently in Google Sheet + broadcast to all devices)
+    if (action === 'sendNotification') {
+      let notifSheet = ss.getSheetByName(TAB_NOTIFICATIONS);
+      if (!notifSheet) {
+        notifSheet = ss.insertSheet(TAB_NOTIFICATIONS);
+        notifSheet.getRange(1, 1, 1, NOTIFICATION_HEADERS.length)
+          .setValues([NOTIFICATION_HEADERS])
+          .setFontWeight('bold')
+          .setBackground('#4a1c11')
+          .setFontColor('#fde68a');
+        notifSheet.setFrozenRows(1);
+      }
+
+      const notifId = sanitizeCellForSheet(p.Notification_ID || ('NOTIF-' + new Date().getTime() + '-' + Math.random().toString(36).substring(2, 6).toUpperCase()), 50);
+      const timestamp = sanitizeCellForSheet(p.Timestamp || Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss'), 30);
+      const message = sanitizeCellForSheet(p.Message || '', 500);
+      const sender = sanitizeCellForSheet(p.Sender || 'Parish Admin', 60);
+      const status = 'ACTIVE';
+
+      const notifObj = {
+        Notification_ID: notifId,
+        Timestamp: timestamp,
+        Message: message,
+        Sender: sender,
+        Status: status
+      };
+
+      notifSheet.appendRow([notifId, timestamp, message, sender, status]);
+
+      try {
+        PropertiesService.getScriptProperties().setProperty('LATEST_NOTIFICATION_JSON', JSON.stringify(notifObj));
+      } catch (e) {}
+
+      lock.releaseLock();
+      return createJsonResponse({
+        status: 'success',
+        action: 'sendNotification',
+        notification: notifObj
+      });
+    }
+
+    // ACTION: CLEAR / EXPIRE ACTIVE NOTIFICATION
+    if (action === 'clearNotification') {
+      try {
+        PropertiesService.getScriptProperties().deleteProperty('LATEST_NOTIFICATION_JSON');
+      } catch (e) {}
+
+      let notifSheet = ss.getSheetByName(TAB_NOTIFICATIONS);
+      if (notifSheet && notifSheet.getLastRow() > 1) {
+        notifSheet.getRange(notifSheet.getLastRow(), 5).setValue('EXPIRED');
+      }
+
+      lock.releaseLock();
+      return createJsonResponse({
+        status: 'success',
+        action: 'clearNotification'
       });
     }
 

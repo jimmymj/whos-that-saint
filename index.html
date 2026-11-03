@@ -171,6 +171,19 @@
       </button>
     </div>
 
+    <!-- ACTIVE PARISH ANNOUNCEMENT BAR (TAPPABLE TO RE-OPEN POPUP) -->
+    <div id="topAnnouncementPill" onclick="reopenCurrentNotification()"
+      class="hidden w-full rounded-xl p-2.5 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 text-white font-black text-xs shadow-md flex items-center justify-between gap-2 cursor-pointer active:scale-[0.99] border-2 border-amber-300">
+      <div class="flex items-center gap-2 min-w-0">
+        <span class="text-base shrink-0 animate-bounce">📢</span>
+        <div class="truncate">
+          <span class="font-extrabold uppercase text-[10px] bg-royal-950/40 px-1.5 py-0.5 rounded text-amber-200">Parish Announcement</span>
+          <span id="topAnnouncementText" class="ml-1 truncate font-bold text-xs text-white">...</span>
+        </div>
+      </div>
+      <span class="text-[11px] bg-white text-royal-950 font-black px-2 py-0.5 rounded-lg shadow-sm shrink-0">View ❯</span>
+    </div>
+
     <!-- ==========================================
          VIEW 1: FAST ONE-SCREEN REGISTRATION & ACTIVITY OPTIONS
          ========================================== -->
@@ -559,6 +572,95 @@
           <p id="adminOptionSyncStatusText" class="text-[11px] font-bold text-slate-600"></p>
         </div>
 
+        <!-- ADMIN CONTROLS: LIVE PARISH ANNOUNCEMENT & POPUP NOTIFICATION (SAVED TO GOOGLE SHEET) -->
+        <div class="w-full rounded-xl p-3 bg-gradient-to-br from-amber-500/10 via-amber-100 to-amber-200/50 border-2 border-amber-500 shadow-sm space-y-2.5">
+          <div class="flex items-center justify-between gap-2 border-b border-amber-300 pb-1.5">
+            <div class="flex items-center gap-2">
+              <span class="text-xl">📢</span>
+              <div>
+                <h3 class="text-sm sm:text-base font-black text-royal-950">Live Parish Broadcast &amp; Popup Notification</h3>
+                <p class="text-[11px] text-slate-700 font-semibold">Broadcasts an instant popup alert to all participants using the app. Permanently logged in Google Sheet (<code class="bg-amber-200/70 px-1 rounded font-mono">Parish_Notifications</code>).</p>
+              </div>
+            </div>
+            <span id="adminBroadcastActiveBadge" class="hidden px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-600 text-white shrink-0 animate-pulse">
+              ● Active Notice
+            </span>
+          </div>
+
+          <!-- Announcement Message Input -->
+          <div class="space-y-1">
+            <div class="flex items-center justify-between">
+              <label for="inputAdminBroadcastMessage" class="text-xs font-black text-royal-900 uppercase">
+                Announcement Message:
+              </label>
+              <span class="text-[10px] text-slate-500 font-bold" id="notifCharCount">0 / 300</span>
+            </div>
+            <textarea id="inputAdminBroadcastMessage" rows="3" maxlength="300"
+              oninput="document.getElementById('notifCharCount').textContent = `${this.value.length} / 300`"
+              placeholder="Type announcement here (e.g., 'Father is announcing the costume winners at 12:30 PM in the parish hall! Please finish your games now.')..."
+              class="w-full p-2.5 rounded-xl border-2 border-amber-300 focus:border-royal-900 focus:outline-none text-sm font-bold text-slate-900 bg-white shadow-inner"></textarea>
+          </div>
+
+          <!-- Quick 1-Tap Preset Announcement Templates -->
+          <div class="space-y-1">
+            <p class="text-[11px] font-black uppercase text-slate-600">Quick 1-Tap Templates:</p>
+            <div class="flex flex-wrap gap-1.5 text-xs font-bold">
+              <button type="button" onclick="adminApplyNotifPreset('🏆 Costume Contest Winners Announcement is starting now in the Parish Hall! Come gather round!')"
+                class="px-2 py-1 rounded-lg bg-white border border-amber-400 hover:bg-amber-100 text-royal-950 text-[11px] font-extrabold active:scale-[0.98]">
+                🏆 Winners Announcement
+              </button>
+              <button type="button" onclick="adminApplyNotifPreset('⏳ Last Call: 5 Minutes remaining to submit your Saint matches before the leaderboard closes!')"
+                class="px-2 py-1 rounded-lg bg-white border border-amber-400 hover:bg-amber-100 text-royal-950 text-[11px] font-extrabold active:scale-[0.98]">
+                ⏳ 5-Min Last Call
+              </button>
+              <button type="button" onclick="adminApplyNotifPreset('🥪 All Saints Day treats, snacks, and apple cider are now being served in the hall! Enjoy!')"
+                class="px-2 py-1 rounded-lg bg-white border border-amber-400 hover:bg-amber-100 text-royal-950 text-[11px] font-extrabold active:scale-[0.98]">
+                🥪 Treats &amp; Cider
+              </button>
+              <button type="button" onclick="adminApplyNotifPreset('🙏 Thank you everyone for participating! Please check the Leaderboard to view your final ranks and scores!')"
+                class="px-2 py-1 rounded-lg bg-white border border-amber-400 hover:bg-amber-100 text-royal-950 text-[11px] font-extrabold active:scale-[0.98]">
+                🙏 Thank You Parishioners
+              </button>
+            </div>
+          </div>
+
+          <!-- Sender & Broadcast Controls -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 items-center pt-1">
+            <div class="sm:col-span-1">
+              <label for="inputAdminBroadcastSender" class="block text-[11px] font-black uppercase text-slate-600 mb-0.5">
+                Sent As:
+              </label>
+              <input id="inputAdminBroadcastSender" type="text" value="Parish Organizer" maxlength="30"
+                class="w-full min-h-[42px] px-2.5 rounded-xl border border-slate-300 text-xs font-black text-royal-950 bg-white" />
+            </div>
+            <div class="sm:col-span-2 flex items-center gap-1.5 pt-4 sm:pt-0">
+              <button type="button" onclick="adminSendBroadcastNotification()"
+                class="flex-1 min-h-[44px] px-3 rounded-xl bg-gradient-to-r from-royal-900 to-amber-900 hover:from-royal-800 hover:to-amber-800 text-amber-300 border border-amber-400/50 font-black text-xs sm:text-sm shadow-md active:scale-[0.98] flex items-center justify-center gap-1.5">
+                <span>📢</span> <span>Broadcast Popup to All</span>
+              </button>
+              <button type="button" onclick="adminClearBroadcastNotification()"
+                class="min-h-[44px] px-3 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 font-extrabold text-xs active:scale-[0.98] shrink-0"
+                title="Expire / dismiss the active notification from participant screens">
+                ✕ Clear
+              </button>
+            </div>
+          </div>
+
+          <!-- Broadcast Status Indicator -->
+          <p id="adminBroadcastStatusText" class="text-xs font-bold text-slate-700 pt-0.5"></p>
+
+          <!-- Recent Sent Messages Log (From Google Sheet) -->
+          <div id="adminBroadcastHistoryCard" class="pt-1 border-t border-amber-300/60">
+            <div class="flex items-center justify-between text-[11px] font-extrabold text-slate-700 mb-1">
+              <span>📜 Messages Logged in Google Sheet:</span>
+              <span id="adminBroadcastCountText" class="text-slate-500 font-mono">0 Logged</span>
+            </div>
+            <div id="adminBroadcastHistoryList" class="max-h-36 overflow-y-auto space-y-1 pr-1 text-xs">
+              <p class="text-slate-500 italic p-2 bg-white/70 rounded-lg text-center">No broadcast notifications sent yet.</p>
+            </div>
+          </div>
+        </div>
+
         <h3 class="text-base font-extrabold text-royal-900 border-b pb-1.5">🔒 Encrypted Cloud Database &amp; Sheet Sync</h3>
         <div class="space-y-2">
           <!-- Hashed / Masked Cloud Endpoint Status (Never exposes script URL in plain text) -->
@@ -864,6 +966,35 @@
     </div>
   </div>
 
+  <!-- PARISH BROADCAST POPUP NOTIFICATION MODAL -->
+  <div id="modalParishNotification" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 animate-fade-in">
+    <div class="w-full max-w-sm rounded-2xl bg-gradient-to-b from-royal-950 via-royal-900 to-royal-950 p-4 border-4 border-amber-400 shadow-2xl space-y-3.5 text-white">
+      <div class="flex items-center justify-between border-b border-amber-400/30 pb-2">
+        <div class="flex items-center gap-2">
+          <span class="w-9 h-9 rounded-xl bg-amber-400 text-royal-950 flex items-center justify-center text-xl font-black shadow-inner animate-pulse">
+            📢
+          </span>
+          <div>
+            <h3 class="text-base font-black text-amber-300 leading-tight">Parish Announcement</h3>
+            <span id="notifSenderTag" class="text-[11px] font-extrabold text-amber-100 opacity-90">Parish Organizer</span>
+          </div>
+        </div>
+        <span id="notifTimestampText" class="text-[10px] font-mono text-amber-200/80 bg-royal-800/80 px-2 py-0.5 rounded-full border border-amber-400/30 shrink-0">Just now</span>
+      </div>
+
+      <!-- Message Content Box -->
+      <div class="p-3.5 rounded-xl bg-liturgical-cream border-2 border-amber-400 text-royal-950 shadow-inner">
+        <p id="notifMessageContent" class="text-sm sm:text-base font-black leading-snug whitespace-pre-wrap"></p>
+      </div>
+
+      <!-- Action Button -->
+      <button type="button" onclick="dismissParishNotificationModal()"
+        class="w-full min-h-[48px] rounded-xl bg-gradient-to-r from-amber-400 via-amber-300 to-amber-400 hover:from-amber-300 hover:to-amber-200 text-royal-950 font-black text-sm shadow-md active:scale-[0.98] flex items-center justify-center gap-1.5">
+        <span>✓</span> <span>OK, Got It!</span>
+      </button>
+    </div>
+  </div>
+
   <!-- ADMIN PIN MODAL (PRODUCTION READY — NO PIN SHOWN ON SCREEN) -->
   <div id="modalAdminPin" class="hidden fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-2">
     <div class="w-full max-w-sm rounded-xl bg-white p-3.5 border-2 border-amber-400 shadow-2xl space-y-3">
@@ -907,7 +1038,8 @@
     const STORAGE_KEYS = {
       SETTINGS: 'whos_that_saint_settings_v6',
       ROSTER: 'whos_that_saint_roster_v6',
-      SUBMISSIONS: 'whos_that_saint_submissions_v5'
+      SUBMISSIONS: 'whos_that_saint_submissions_v5',
+      LAST_SEEN_NOTIF: 'whos_that_saint_last_seen_notif_v1'
     };
 
     // Official 71 Parish Kids & Saints (Loaded instantly from Documents/SaintList.csv)
@@ -1595,6 +1727,9 @@
       cloudSyncLoading: false,
       roster: JSON.parse(JSON.stringify(DEFAULT_ROSTER)),
       submissions: [],
+      lastSeenNotificationId: '',
+      latestNotification: null,
+      notificationsHistory: [],
       settings: {
         webhookUrl: '',
         option1_KidToSaint: true,
@@ -1855,6 +1990,9 @@
             }
           } catch (e) {}
         }
+
+        // Load last seen notification ID to prevent repeated popups
+        appState.lastSeenNotificationId = localStorage.getItem(STORAGE_KEYS.LAST_SEEN_NOTIF) || '';
       } catch (err) {
         console.error('Error loading state:', err);
         appState.roster = JSON.parse(JSON.stringify(DEFAULT_ROSTER));
@@ -1981,6 +2119,7 @@
       } else if (viewName === 'results') {
         renderLeaderboardAndAppreciation();
       } else if (viewName === 'admin') {
+        renderAdminNotificationHistory();
         renderAdminRosterCrudList();
         resetKidEditorForm();
         renderAdminScoresTable();
@@ -3091,6 +3230,7 @@
             : `min-h-[48px] rounded-xl p-2 text-xs font-extrabold bg-royal-800 text-white border border-slate-600 active:scale-[0.99]`;
         }
       }
+      if (tabIndex === 1) renderAdminNotificationHistory();
       if (tabIndex === 2) {
         renderAdminRosterCrudList();
         resetKidEditorForm();
@@ -3690,6 +3830,249 @@
       }
     }
 
+    /**************************************************************
+     * 8C. ADMIN BROADCAST ANNOUNCEMENTS & PARISH POPUP NOTIFICATIONS
+     **************************************************************/
+    function playNotificationChime() {
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        if (ctx.state === 'suspended') {
+          ctx.resume();
+        }
+        const now = ctx.currentTime;
+
+        // Note 1: E5 (659.25 Hz)
+        const osc1 = ctx.createOscillator();
+        const gain1 = ctx.createGain();
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(659.25, now);
+        gain1.gain.setValueAtTime(0.18, now);
+        gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+        osc1.connect(gain1);
+        gain1.connect(ctx.destination);
+        osc1.start(now);
+        osc1.stop(now + 0.35);
+
+        // Note 2: A5 (880 Hz)
+        const osc2 = ctx.createOscillator();
+        const gain2 = ctx.createGain();
+        osc2.type = 'sine';
+        osc2.frequency.setValueAtTime(880, now + 0.12);
+        gain2.gain.setValueAtTime(0.22, now + 0.12);
+        gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
+        osc2.connect(gain2);
+        gain2.connect(ctx.destination);
+        osc2.start(now + 0.12);
+        osc2.stop(now + 0.55);
+      } catch (e) {}
+    }
+
+    function formatNotifTime(ts) {
+      if (!ts) return "Just now";
+      try {
+        const d = new Date(String(ts).replace(/-/g, '/'));
+        if (isNaN(d.getTime())) return String(ts);
+        return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+      } catch (e) {
+        return String(ts);
+      }
+    }
+
+    function adminApplyNotifPreset(text) {
+      const input = document.getElementById('inputAdminBroadcastMessage');
+      if (input) {
+        input.value = text;
+        const count = document.getElementById('notifCharCount');
+        if (count) count.textContent = `${text.length} / 300`;
+        input.focus();
+      }
+    }
+
+    async function adminSendBroadcastNotification() {
+      const input = document.getElementById('inputAdminBroadcastMessage');
+      const senderInput = document.getElementById('inputAdminBroadcastSender');
+      const statusEl = document.getElementById('adminBroadcastStatusText');
+
+      const rawMsg = input ? input.value.trim() : '';
+      const rawSender = senderInput ? senderInput.value.trim() : 'Parish Organizer';
+
+      if (!rawMsg || rawMsg.length < 3) {
+        showToast("Please enter an announcement message (at least 3 characters)!", "error");
+        if (input) input.focus();
+        return;
+      }
+
+      if (!getActiveCloudUrl()) {
+        showToast("Encrypted Cloud Sync Key is required to broadcast to all devices!", "error");
+        return;
+      }
+
+      const notifId = `NOTIF-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+      const nowIso = new Date().toISOString().replace('T', ' ').substring(0, 19);
+
+      const notifPayload = {
+        Notification_ID: notifId,
+        Timestamp: nowIso,
+        Message: rawMsg,
+        Sender: rawSender,
+        Status: 'ACTIVE'
+      };
+
+      if (statusEl) statusEl.textContent = "⏳ Sending notification to Google Sheet & broadcasting...";
+
+      // Save locally
+      appState.latestNotification = notifPayload;
+      if (!Array.isArray(appState.notificationsHistory)) appState.notificationsHistory = [];
+      appState.notificationsHistory.unshift(notifPayload);
+      renderAdminNotificationHistory();
+      renderTopAnnouncementPill(notifPayload);
+
+      // Push to Google Sheet
+      const res = await sendCloudWriteRequest('sendNotification', notifPayload);
+
+      if (res && res.ok) {
+        if (statusEl) statusEl.innerHTML = `<span class="text-emerald-700 font-extrabold">✓ Successfully broadcasted &amp; saved to Google Sheet at ${new Date().toLocaleTimeString()}!</span>`;
+        showToast("📢 Broadcast Notification sent to all parishioners!", "success");
+        if (input) input.value = '';
+        const count = document.getElementById('notifCharCount');
+        if (count) count.textContent = "0 / 300";
+      } else {
+        if (statusEl) statusEl.innerHTML = `<span class="text-amber-800 font-bold">⚠ Saved locally. Cloud Sheet sync pending: ${escapeHtml(res?.message || 'Network error')}</span>`;
+      }
+    }
+
+    async function adminClearBroadcastNotification() {
+      const statusEl = document.getElementById('adminBroadcastStatusText');
+      if (statusEl) statusEl.textContent = "⏳ Clearing active announcement...";
+
+      appState.latestNotification = null;
+      handleNotificationCleared();
+
+      if (getActiveCloudUrl()) {
+        await sendCloudWriteRequest('clearNotification', {});
+      }
+
+      if (statusEl) statusEl.innerHTML = `<span class="text-slate-600 font-bold">Active announcement cleared and expired.</span>`;
+      showToast("Cleared active announcement.", "info");
+      renderAdminNotificationHistory();
+    }
+
+    function renderAdminNotificationHistory() {
+      const container = document.getElementById('adminBroadcastHistoryList');
+      const countEl = document.getElementById('adminBroadcastCountText');
+      const activeBadge = document.getElementById('adminBroadcastActiveBadge');
+
+      if (activeBadge) {
+        activeBadge.classList.toggle('hidden', !appState.latestNotification || appState.latestNotification.Status === 'EXPIRED');
+      }
+
+      if (!container) return;
+
+      const list = appState.notificationsHistory || [];
+      if (countEl) countEl.textContent = `${list.length} Logged`;
+
+      if (list.length === 0) {
+        container.innerHTML = `<p class="text-slate-500 italic p-2 bg-white/70 rounded-lg text-center">No broadcast notifications logged in Google Sheet yet.</p>`;
+        return;
+      }
+
+      container.innerHTML = list.map(item => {
+        const isActive = appState.latestNotification && appState.latestNotification.Notification_ID === item.Notification_ID && item.Status !== 'EXPIRED';
+        const badge = isActive
+          ? `<span class="bg-emerald-600 text-white font-black px-1.5 py-0.5 rounded text-[10px]">Active</span>`
+          : `<span class="bg-slate-200 text-slate-700 font-bold px-1.5 py-0.5 rounded text-[10px]">Logged</span>`;
+        return `
+          <div class="p-2 rounded-lg bg-white border border-amber-300/80 shadow-xs space-y-1">
+            <div class="flex items-center justify-between text-[11px] gap-2">
+              <span class="font-extrabold text-royal-900">${escapeHtml(item.Sender || 'Parish Admin')} ${badge}</span>
+              <span class="text-[10px] text-slate-500 font-mono">${escapeHtml(item.Timestamp || '')}</span>
+            </div>
+            <p class="text-xs font-bold text-slate-800 leading-snug">${escapeHtml(item.Message || '')}</p>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function handleIncomingCloudNotification(notif) {
+      if (!notif || !notif.Notification_ID || !notif.Message) return;
+      if (notif.Status === 'EXPIRED') {
+        handleNotificationCleared();
+        return;
+      }
+
+      appState.latestNotification = notif;
+      renderTopAnnouncementPill(notif);
+
+      // Trigger modal popup if this is a new notification the user has not dismissed yet
+      if (notif.Notification_ID !== appState.lastSeenNotificationId) {
+        showParishNotificationModal(notif);
+      }
+    }
+
+    function showParishNotificationModal(notif) {
+      const modal = document.getElementById('modalParishNotification');
+      if (!modal) return;
+
+      const senderEl = document.getElementById('notifSenderTag');
+      const timeEl = document.getElementById('notifTimestampText');
+      const msgEl = document.getElementById('notifMessageContent');
+
+      if (senderEl) senderEl.textContent = notif.Sender || 'Parish Organizer';
+      if (timeEl) timeEl.textContent = formatNotifTime(notif.Timestamp);
+      if (msgEl) msgEl.textContent = notif.Message || '';
+
+      modal.classList.remove('hidden');
+
+      // Play chime sound & vibration
+      playNotificationChime();
+      try {
+        if (navigator.vibrate) navigator.vibrate([100, 60, 140]);
+      } catch (e) {}
+
+      showToast("📢 New Parish Announcement Received!", "info");
+    }
+
+    function dismissParishNotificationModal() {
+      const modal = document.getElementById('modalParishNotification');
+      if (modal) modal.classList.add('hidden');
+
+      if (appState.latestNotification && appState.latestNotification.Notification_ID) {
+        appState.lastSeenNotificationId = appState.latestNotification.Notification_ID;
+        try {
+          localStorage.setItem(STORAGE_KEYS.LAST_SEEN_NOTIF, appState.lastSeenNotificationId);
+        } catch (e) {}
+      }
+    }
+
+    function reopenCurrentNotification() {
+      if (appState.latestNotification) {
+        showParishNotificationModal(appState.latestNotification);
+      }
+    }
+
+    function handleNotificationCleared() {
+      appState.latestNotification = null;
+      const modal = document.getElementById('modalParishNotification');
+      if (modal) modal.classList.add('hidden');
+      const pill = document.getElementById('topAnnouncementPill');
+      if (pill) pill.classList.add('hidden');
+    }
+
+    function renderTopAnnouncementPill(notif) {
+      const pill = document.getElementById('topAnnouncementPill');
+      const textEl = document.getElementById('topAnnouncementText');
+      if (!pill) return;
+
+      if (notif && notif.Message && notif.Status !== 'EXPIRED') {
+        pill.classList.remove('hidden');
+        if (textEl) textEl.textContent = notif.Message;
+      } else {
+        pill.classList.add('hidden');
+      }
+    }
+
     async function testCloudConnection() {
       saveAdminSettings();
       const statusEl = document.getElementById('cloudTestStatusText');
@@ -3827,6 +4210,18 @@
               ...pendingLocal
             ];
             saveSubmissionsToStorage();
+          }
+
+          // 4. Apply Live Parish Broadcast Notification from Google Sheet
+          if (data.latestNotification && typeof data.latestNotification === 'object') {
+            handleIncomingCloudNotification(data.latestNotification);
+          } else if (data.latestNotification === null) {
+            handleNotificationCleared();
+          }
+
+          if (Array.isArray(data.notifications)) {
+            appState.notificationsHistory = data.notifications;
+            renderAdminNotificationHistory();
           }
           if (appState.session && appState.session.active) {
             renderEventStatusAndTimerUI();
