@@ -15,21 +15,296 @@
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="whos-that-saint-qr.png">
   <title>Who’s That Saint? — All Saints' Day Find Activity</title>
+  <meta name="theme-color" id="metaThemeColor" content="#3b150c">
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
+    // 12 Monthly Visual Themes Definition (High contrast, accessible, WCAG AAA compliant)
+    const MONTHLY_THEMES = [
+      {
+        id: 0,
+        name: "January",
+        title: "January — Winter Epiphany",
+        subtitle: "Epiphany Star of Bethlehem & Holy Name of Jesus",
+        icon: "⭐",
+        season: "Epiphanytide",
+        primaryName: "Midnight Sapphire",
+        vars: {
+          '--theme-royal-950': '#081426',
+          '--theme-royal-900': '#0f274a',
+          '--theme-royal-800': '#1b3d6d',
+          '--theme-gold': '#d97706',
+          '--theme-light': '#eff6ff',
+          '--theme-cream': '#f6f9fe',
+          '--theme-status-bar': '#0b1d36',
+          '--theme-radial-top': 'rgba(59, 130, 246, 0.08)',
+          '--theme-radial-bot': 'rgba(15, 39, 74, 0.07)'
+        }
+      },
+      {
+        id: 1,
+        name: "February",
+        title: "February — Candlemas & Holy Family",
+        subtitle: "Presentation of the Lord & Candlemas Glow",
+        icon: "🕯️",
+        season: "Candlemas & Holy Family",
+        primaryName: "Sacred Heart Plum",
+        vars: {
+          '--theme-royal-950': '#220914',
+          '--theme-royal-900': '#421226',
+          '--theme-royal-800': '#681f3d',
+          '--theme-gold': '#e18b22',
+          '--theme-light': '#fdf2f8',
+          '--theme-cream': '#fff7fb',
+          '--theme-status-bar': '#330d1d',
+          '--theme-radial-top': 'rgba(225, 139, 34, 0.08)',
+          '--theme-radial-bot': 'rgba(66, 18, 38, 0.06)'
+        }
+      },
+      {
+        id: 2,
+        name: "March",
+        title: "March — St. Patrick & St. Joseph",
+        subtitle: "Celtic Shamrock & Patron of the Universal Church",
+        icon: "☘️",
+        season: "St. Patrick & St. Joseph",
+        primaryName: "Celtic Sacred Emerald",
+        vars: {
+          '--theme-royal-950': '#062117',
+          '--theme-royal-900': '#0d3d2c',
+          '--theme-royal-800': '#185c43',
+          '--theme-gold': '#d97706',
+          '--theme-light': '#ecfdf5',
+          '--theme-cream': '#f4fbf7',
+          '--theme-status-bar': '#0a2e21',
+          '--theme-radial-top': 'rgba(16, 185, 129, 0.08)',
+          '--theme-radial-bot': 'rgba(13, 61, 44, 0.07)'
+        }
+      },
+      {
+        id: 3,
+        name: "April",
+        title: "April — Easter Resurrection",
+        subtitle: "Paschal Joy, Divine Mercy & Triumph over Death",
+        icon: "🕊️",
+        season: "Eastertide",
+        primaryName: "Imperial Paschal Tyrian",
+        vars: {
+          '--theme-royal-950': '#240a1b',
+          '--theme-royal-900': '#471536',
+          '--theme-royal-800': '#6e2454',
+          '--theme-gold': '#eab308',
+          '--theme-light': '#fef9c3',
+          '--theme-cream': '#fffdf0',
+          '--theme-status-bar': '#360f29',
+          '--theme-radial-top': 'rgba(234, 179, 8, 0.09)',
+          '--theme-radial-bot': 'rgba(71, 21, 54, 0.06)'
+        }
+      },
+      {
+        id: 4,
+        name: "May",
+        title: "May — Marian Blue & Queen of Heaven",
+        subtitle: "Month of the Blessed Virgin Mary & Mystical Rose",
+        icon: "👑",
+        season: "Month of Mary",
+        primaryName: "Madonna Sacred Azure",
+        vars: {
+          '--theme-royal-950': '#081d33',
+          '--theme-royal-900': '#123861',
+          '--theme-royal-800': '#1e538c',
+          '--theme-gold': '#f59e0b',
+          '--theme-light': '#f0f7ff',
+          '--theme-cream': '#f7faff',
+          '--theme-status-bar': '#0d2c4d',
+          '--theme-radial-top': 'rgba(30, 83, 140, 0.08)',
+          '--theme-radial-bot': 'rgba(18, 56, 97, 0.07)'
+        }
+      },
+      {
+        id: 5,
+        name: "June",
+        title: "June — Most Sacred Heart of Jesus",
+        subtitle: "Sacred Heart of Jesus & Divine Infinite Love",
+        icon: "❤️‍🔥",
+        season: "Month of the Sacred Heart",
+        primaryName: "Sacred Heart Crimson",
+        vars: {
+          '--theme-royal-950': '#2b0606',
+          '--theme-royal-900': '#540e0e',
+          '--theme-royal-800': '#7d1818',
+          '--theme-gold': '#f59e0b',
+          '--theme-light': '#fef2f2',
+          '--theme-cream': '#fff7f7',
+          '--theme-status-bar': '#3e0a0a',
+          '--theme-radial-top': 'rgba(239, 68, 68, 0.08)',
+          '--theme-radial-bot': 'rgba(84, 14, 14, 0.07)'
+        }
+      },
+      {
+        id: 6,
+        name: "July",
+        title: "July — Mount Carmel & Precious Blood",
+        subtitle: "Our Lady of Mount Carmel & The Most Precious Blood",
+        icon: "⛰️",
+        season: "Mount Carmel & Precious Blood",
+        primaryName: "Carmelite Bronze & Sienna",
+        vars: {
+          '--theme-royal-950': '#231206',
+          '--theme-royal-900': '#452410',
+          '--theme-royal-800': '#69391a',
+          '--theme-gold': '#d97706',
+          '--theme-light': '#fef3c7',
+          '--theme-cream': '#fcf7ee',
+          '--theme-status-bar': '#351a0a',
+          '--theme-radial-top': 'rgba(217, 119, 6, 0.08)',
+          '--theme-radial-bot': 'rgba(69, 36, 16, 0.06)'
+        }
+      },
+      {
+        id: 7,
+        name: "August",
+        title: "August — Assumption of Mary",
+        subtitle: "Solemnity of the Assumption & Coronation of Our Lady",
+        icon: "✨",
+        season: "The Assumption",
+        primaryName: "Celestial Indigo",
+        vars: {
+          '--theme-royal-950': '#110d2c',
+          '--theme-royal-900': '#251c57',
+          '--theme-royal-800': '#3d2f85',
+          '--theme-gold': '#eab308',
+          '--theme-light': '#faf5ff',
+          '--theme-cream': '#fbf8ff',
+          '--theme-status-bar': '#1c1543',
+          '--theme-radial-top': 'rgba(168, 85, 247, 0.08)',
+          '--theme-radial-bot': 'rgba(37, 28, 87, 0.07)'
+        }
+      },
+      {
+        id: 8,
+        name: "September",
+        title: "September — Triumph of the Holy Cross",
+        subtitle: "Exaltation of the Holy Cross & Seven Sorrows",
+        icon: "✝️",
+        season: "Exaltation of the Cross",
+        primaryName: "Imperial Liturgical Violet",
+        vars: {
+          '--theme-royal-950': '#1c0d29',
+          '--theme-royal-900': '#3b1d54',
+          '--theme-royal-800': '#5c2f82',
+          '--theme-gold': '#d97706',
+          '--theme-light': '#fdf4ff',
+          '--theme-cream': '#faf4fc',
+          '--theme-status-bar': '#2c153f',
+          '--theme-radial-top': 'rgba(217, 119, 6, 0.08)',
+          '--theme-radial-bot': 'rgba(59, 29, 84, 0.06)'
+        }
+      },
+      {
+        id: 9,
+        name: "October",
+        title: "October — Holy Rosary & Guardian Angels",
+        subtitle: "Feast of the Holy Rosary & Heavenly Protectors",
+        icon: "📿",
+        season: "Month of the Holy Rosary",
+        primaryName: "Angelic Deep Teal",
+        vars: {
+          '--theme-royal-950': '#071f21',
+          '--theme-royal-900': '#0e3b3f',
+          '--theme-royal-800': '#1b5c62',
+          '--theme-gold': '#f59e0b',
+          '--theme-light': '#f0fdfa',
+          '--theme-cream': '#f4fbf9',
+          '--theme-status-bar': '#0b2e31',
+          '--theme-radial-top': 'rgba(20, 184, 166, 0.08)',
+          '--theme-radial-bot': 'rgba(14, 59, 63, 0.07)'
+        }
+      },
+      {
+        id: 10,
+        name: "November",
+        title: "November — All Saints & Fall Harvest",
+        subtitle: "Solemnity of All Saints, All Souls & Autumn Thanksgiving",
+        icon: "🍂",
+        season: "All Saints & Fall Season",
+        primaryName: "Fall Mahogany & Espresso Bark (Original Theme)",
+        vars: {
+          '--theme-royal-950': '#2a0f0a',
+          '--theme-royal-900': '#4a1c11',
+          '--theme-royal-800': '#6b2818',
+          '--theme-gold': '#d97706',
+          '--theme-light': '#fef3c7',
+          '--theme-cream': '#fdf8f0',
+          '--theme-status-bar': '#3b150c',
+          '--theme-radial-top': 'rgba(217, 119, 6, 0.08)',
+          '--theme-radial-bot': 'rgba(107, 40, 24, 0.06)'
+        }
+      },
+      {
+        id: 11,
+        name: "December",
+        title: "December — Advent & Nativity of Our Lord",
+        subtitle: "Advent Hope, Manger of Bethlehem & Christmastide",
+        icon: "🎄",
+        season: "Advent & Christmastide",
+        primaryName: "Bethlehem Nocturne Navy",
+        vars: {
+          '--theme-royal-950': '#0c1829',
+          '--theme-royal-900': '#172f4f',
+          '--theme-royal-800': '#274b7a',
+          '--theme-gold': '#f59e0b',
+          '--theme-light': '#fffbeb',
+          '--theme-cream': '#fbfaf5',
+          '--theme-status-bar': '#102138',
+          '--theme-radial-top': 'rgba(245, 158, 11, 0.08)',
+          '--theme-radial-bot': 'rgba(23, 47, 79, 0.07)'
+        }
+      }
+    ];
+
+    // Synchronous Zero-FOUC Theme Preloader: Runs BEFORE first paint to ensure instant display
+    (function initStartupThemeEarly() {
+      try {
+        var savedRaw = localStorage.getItem('whos_that_saint_settings_v6');
+        var mode = 'dynamic_month';
+        var manualMonth = 10;
+        if (savedRaw) {
+          var parsed = JSON.parse(savedRaw);
+          if (parsed.themeStartupMode) mode = parsed.themeStartupMode;
+          if (parsed.themeManualMonth !== undefined) manualMonth = Number(parsed.themeManualMonth);
+        }
+        var targetMonth = 10;
+        if (mode === 'random') {
+          targetMonth = Math.floor(Math.random() * 12);
+        } else if (mode === 'manual') {
+          targetMonth = (manualMonth >= 0 && manualMonth <= 11) ? manualMonth : 10;
+        } else {
+          targetMonth = new Date().getMonth(); // 0 to 11
+        }
+        window.__STARTUP_THEME_MONTH__ = targetMonth;
+        var theme = MONTHLY_THEMES[targetMonth] || MONTHLY_THEMES[10];
+        if (theme && theme.vars) {
+          var root = document.documentElement;
+          for (var k in theme.vars) {
+            root.style.setProperty(k, theme.vars[k]);
+          }
+        }
+      } catch (e) {}
+    })();
+
     tailwind.config = {
       theme: {
         extend: {
           colors: {
             royal: {
-              800: '#6b2818', /* Warm Autumn Russet / Cinnamon */
-              900: '#4a1c11', /* Rich Fall Mahogany / Deep Burgundy */
-              950: '#2a0f0a'  /* Deep Espresso Bark */
+              800: 'var(--theme-royal-800, #6b2818)',
+              900: 'var(--theme-royal-900, #4a1c11)',
+              950: 'var(--theme-royal-950, #2a0f0a)'
             },
             liturgical: {
-              gold: '#d97706', /* Harvest Amber Gold */
-              light: '#fef3c7', /* Soft Marigold Cream */
-              cream: '#fdf8f0'  /* Warm Autumn Parchment */
+              gold: 'var(--theme-gold, #d97706)',
+              light: 'var(--theme-light, #fef3c7)',
+              cream: 'var(--theme-cream, #fdf8f0)'
             }
           }
         }
@@ -37,6 +312,17 @@
     };
   </script>
   <style>
+    :root {
+      --theme-royal-800: #6b2818;
+      --theme-royal-900: #4a1c11;
+      --theme-royal-950: #2a0f0a;
+      --theme-gold: #d97706;
+      --theme-light: #fef3c7;
+      --theme-cream: #fdf8f0;
+      --theme-status-bar: #3b150c;
+      --theme-radial-top: rgba(217, 119, 6, 0.08);
+      --theme-radial-bot: rgba(107, 40, 24, 0.06);
+    }
     * {
       -webkit-tap-highlight-color: transparent;
       box-sizing: border-box;
@@ -50,7 +336,7 @@
       max-width: 100vw;
       overflow: hidden;
       overscroll-behavior: none;
-      background-color: #3b150c; /* Matches top app bar so status bar / notch area is never blank cream */
+      background-color: var(--theme-status-bar, #3b150c);
       color: #1c1917;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       touch-action: manipulation;
@@ -65,9 +351,9 @@
       display: flex;
       flex-direction: column;
       overflow: hidden;
-      background-color: #fdf8f0;
-      background-image: radial-gradient(circle at top right, rgba(217, 119, 6, 0.08), transparent 45%),
-                        radial-gradient(circle at bottom left, rgba(107, 40, 24, 0.06), transparent 45%);
+      background-color: var(--theme-cream, #fdf8f0);
+      background-image: radial-gradient(circle at top right, var(--theme-radial-top, rgba(217, 119, 6, 0.08)), transparent 45%),
+                        radial-gradient(circle at bottom left, var(--theme-radial-bot, rgba(107, 40, 24, 0.06)), transparent 45%);
     }
     #appMainScroll {
       flex: 1 1 0%;
@@ -77,10 +363,10 @@
       overscroll-behavior-y: contain;
     }
     :fullscreen, ::backdrop {
-      background-color: #3b150c;
+      background-color: var(--theme-status-bar, #3b150c);
     }
     :-webkit-full-screen {
-      background-color: #3b150c;
+      background-color: var(--theme-status-bar, #3b150c);
     }
     @keyframes tickerScroll {
       0% { transform: translateY(0%); }
@@ -667,6 +953,85 @@
           <div class="flex items-center justify-between text-[11px] font-bold text-slate-600 px-0.5">
             <span id="adminBonusPoolStats">📚 Question Pool: 15 Questions</span>
             <span id="adminBonusSyncStatusText" class="text-emerald-700 font-bold"></span>
+          </div>
+        </div>
+
+        <!-- ADMIN CONTROLS: 🎨 DYNAMIC MONTHLY VISUAL THEMES ENGINE -->
+        <div class="w-full rounded-xl p-3 bg-gradient-to-br from-amber-500/10 via-amber-50 to-amber-200/40 border-2 border-amber-400 shadow-sm space-y-3">
+          <div class="flex items-center justify-between gap-2 border-b border-amber-300 pb-2">
+            <div class="flex items-center gap-2">
+              <span class="text-2xl">🎨</span>
+              <div>
+                <h3 class="text-sm sm:text-base font-black text-royal-950">Dynamic Monthly Visual Themes</h3>
+                <p class="text-[11px] text-slate-700 font-semibold">12 distinct Catholic liturgical &amp; seasonal palettes. Defaults to current calendar month with zero load impact.</p>
+              </div>
+            </div>
+            <span id="adminThemeSyncBadge" class="bg-royal-900 text-amber-300 text-[10px] font-black px-2 py-1 rounded-lg shrink-0">
+              Live Engine
+            </span>
+          </div>
+
+          <!-- Active Theme Display Banner -->
+          <div class="p-2.5 rounded-xl bg-white border-2 border-amber-300/80 flex flex-wrap items-center justify-between gap-2 shadow-xs">
+            <div class="flex items-center gap-2.5">
+              <span id="adminActiveThemeIcon" class="text-2xl">🍂</span>
+              <div>
+                <div class="flex items-center gap-1.5">
+                  <span class="text-[10px] font-black uppercase tracking-wider text-slate-500">Active Theme:</span>
+                  <span id="adminActiveThemeSeasonBadge" class="px-1.5 py-0.2 rounded text-[10px] font-extrabold bg-amber-100 text-amber-900">Current Month</span>
+                </div>
+                <h4 id="adminActiveThemeTitle" class="text-xs sm:text-sm font-black text-royal-900 leading-tight">November — All Saints &amp; Fall Harvest</h4>
+                <p id="adminActiveThemeSubtitle" class="text-[11px] font-medium text-slate-600">Solemnity of All Saints, All Souls &amp; Autumn Thanksgiving</p>
+              </div>
+            </div>
+
+            <!-- Active Swatches & Next Preview Tour Button -->
+            <div class="flex items-center gap-2">
+              <div id="adminThemeSwatchesContainer" class="flex items-center -space-x-1.5 bg-slate-100 p-1 rounded-lg border border-slate-300" title="Active Palette Swatches">
+                <!-- Injected via JS -->
+              </div>
+              <button type="button" onclick="adminPreviewNextTheme()"
+                class="px-2.5 py-1.5 rounded-lg bg-royal-900 hover:bg-royal-800 text-amber-300 font-black text-xs shadow-xs active:scale-95 flex items-center gap-1">
+                <span>Next Month</span> <span>➔</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Startup Mode Selector -->
+          <div class="space-y-1.5">
+            <label class="text-xs font-black uppercase text-royal-900 flex items-center justify-between">
+              <span>App Startup Behavior (Persisted to Cloud Sheet):</span>
+              <span id="adminThemeStartupLabel" class="text-[11px] font-extrabold text-emerald-800">📅 Current Month (Default)</span>
+            </label>
+            <div class="grid grid-cols-2 gap-2">
+              <!-- Mode: Dynamic Current Month -->
+              <button type="button" id="btnThemeModeDynamic" onclick="adminSetThemeStartupMode('dynamic_month')"
+                class="p-2 rounded-xl border-2 border-emerald-600 bg-emerald-50 text-emerald-950 font-black text-xs flex items-center justify-center gap-1.5 shadow-xs active:scale-[0.98]">
+                <span>📅</span> <span>Dynamic Current Month</span>
+              </button>
+              <!-- Mode: Randomize on Launch -->
+              <button type="button" id="btnThemeModeRandom" onclick="adminSetThemeStartupMode('random')"
+                class="p-2 rounded-xl border-2 border-slate-300 bg-white text-slate-700 font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs active:scale-[0.98]">
+                <span>🎲</span> <span>Randomize on Launch</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- 12 Quick-Preview Monthly Theme Selector Grid -->
+          <div class="space-y-1">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-black uppercase text-slate-700">12 Monthly Themes (1-Tap Instant Preview &amp; Switch):</span>
+              <span class="text-[10px] text-slate-500 font-bold">&lt; 1ms GPU Switch</span>
+            </div>
+            <div id="adminMonthlyThemeGrid" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-1.5 text-xs font-bold">
+              <!-- 12 Month Buttons dynamically rendered -->
+            </div>
+          </div>
+
+          <!-- Status / Cloud Sync Notification Text -->
+          <div class="flex items-center justify-between text-[11px] font-bold text-slate-600 px-0.5">
+            <span id="adminThemeStatusText">✓ Theme engine active • Synchronously loaded before paint</span>
+            <span id="adminThemeCloudStatus" class="text-emerald-700 font-bold"></span>
           </div>
         </div>
 
@@ -2144,7 +2509,9 @@
         eventStatus: 'RUNNING', // 'RUNNING' or 'STOPPED'
         eventEndTime: 0,        // epoch timestamp ms, 0 = no limit
         bonusQuestionsEnabled: true,
-        bonusPointsPerQuestion: 5
+        bonusPointsPerQuestion: 5,
+        themeStartupMode: 'dynamic_month',
+        themeManualMonth: 10
       },
       session: {
         active: false,
@@ -2316,6 +2683,8 @@
 
     window.addEventListener('DOMContentLoaded', () => {
       loadPersistedState();
+      applyThemeOnStartup();
+      updateAdminThemeUI();
       updateSettingsUI();
       renderActivityOptionsUI();
       renderEventStatusAndTimerUI();
@@ -2362,7 +2731,9 @@
             eventStatus: parsed.eventStatus === 'STOPPED' ? 'STOPPED' : 'RUNNING',
             eventEndTime: Number(parsed.eventEndTime) || 0,
             bonusQuestionsEnabled: parsed.bonusQuestionsEnabled !== undefined ? Boolean(parsed.bonusQuestionsEnabled) : true,
-            bonusPointsPerQuestion: Number(parsed.bonusPointsPerQuestion) || 5
+            bonusPointsPerQuestion: Number(parsed.bonusPointsPerQuestion) || 5,
+            themeStartupMode: parsed.themeStartupMode || 'dynamic_month',
+            themeManualMonth: parsed.themeManualMonth !== undefined ? Number(parsed.themeManualMonth) : 10
           };
         }
 
@@ -2453,6 +2824,200 @@
       if (box) box.classList.toggle('hidden');
     }
 
+    /**************************************************************
+     * DYNAMIC MONTHLY THEMES ENGINE & ADMIN CONTROLS
+     **************************************************************/
+    function applyTheme(monthOrId, saveChoice = false) {
+      let monthIdx = 10;
+      if (typeof monthOrId === 'number') {
+        monthIdx = (monthOrId >= 0 && monthOrId <= 11) ? monthOrId : 10;
+      } else if (typeof monthOrId === 'string') {
+        const idx = MONTHLY_THEMES.findIndex(t => t.name.toLowerCase() === monthOrId.toLowerCase() || String(t.id) === monthOrId);
+        if (idx !== -1) monthIdx = idx;
+      }
+
+      const theme = MONTHLY_THEMES[monthIdx] || MONTHLY_THEMES[10];
+      const root = document.documentElement;
+
+      if (theme && theme.vars) {
+        for (const [key, val] of Object.entries(theme.vars)) {
+          root.style.setProperty(key, val);
+        }
+      }
+
+      const metaTheme = document.getElementById('metaThemeColor') || document.querySelector('meta[name="theme-color"]');
+      if (metaTheme && theme.vars['--theme-status-bar']) {
+        metaTheme.setAttribute('content', theme.vars['--theme-status-bar']);
+      }
+
+      appState.activeThemeMonth = monthIdx;
+      document.body.setAttribute('data-active-theme', theme.name.toLowerCase());
+
+      if (saveChoice) {
+        appState.settings.themeManualMonth = monthIdx;
+        localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(appState.settings));
+      }
+
+      updateAdminThemeUI();
+    }
+
+    function resolveStartupThemeMonth(mode, manualMonth) {
+      const currentCalMonth = new Date().getMonth();
+      if (mode === 'random') {
+        return Math.floor(Math.random() * 12);
+      }
+      if (mode === 'manual') {
+        return (manualMonth >= 0 && manualMonth <= 11) ? manualMonth : currentCalMonth;
+      }
+      return currentCalMonth; // Default: 'dynamic_month'
+    }
+
+    function applyThemeOnStartup() {
+      const mode = appState.settings.themeStartupMode || 'dynamic_month';
+      const manualMonth = appState.settings.themeManualMonth !== undefined ? appState.settings.themeManualMonth : 10;
+      const targetMonth = (typeof window.__STARTUP_THEME_MONTH__ === 'number')
+        ? window.__STARTUP_THEME_MONTH__
+        : resolveStartupThemeMonth(mode, manualMonth);
+      applyTheme(targetMonth, false);
+    }
+
+    function applyThemeOnCloudSync() {
+      const mode = appState.settings.themeStartupMode || 'dynamic_month';
+      if (mode === 'manual' && appState.settings.themeManualMonth !== undefined) {
+        applyTheme(appState.settings.themeManualMonth, false);
+      } else if (mode === 'dynamic_month') {
+        applyTheme(new Date().getMonth(), false);
+      }
+      updateAdminThemeUI();
+    }
+
+    async function adminSetThemeStartupMode(mode) {
+      appState.settings.themeStartupMode = mode;
+      saveAdminSettings();
+
+      if (mode === 'dynamic_month') {
+        applyTheme(new Date().getMonth(), false);
+        showToast("Theme Startup Mode: 📅 Dynamic Current Month (Default)", "success");
+      } else if (mode === 'random') {
+        const randMonth = Math.floor(Math.random() * 12);
+        applyTheme(randMonth, false);
+        showToast("Theme Startup Mode: 🎲 Randomized on Launch (Previewing " + MONTHLY_THEMES[randMonth].name + ")", "info");
+      }
+
+      updateAdminThemeUI();
+
+      const cloudStatus = document.getElementById('adminThemeCloudStatus');
+      if (cloudStatus) cloudStatus.textContent = "⏳ Syncing theme mode to Cloud Sheet...";
+      await saveAdminAppConfigToCloud();
+      if (cloudStatus) cloudStatus.innerHTML = '<span class="text-emerald-700">✓ Theme mode synced to Cloud Sheet!</span>';
+    }
+
+    async function adminSelectManualTheme(monthIdx) {
+      appState.settings.themeStartupMode = 'manual';
+      appState.settings.themeManualMonth = monthIdx;
+      saveAdminSettings();
+      applyTheme(monthIdx, true);
+
+      showToast("Switched theme to " + MONTHLY_THEMES[monthIdx].title + "!", "success");
+
+      const cloudStatus = document.getElementById('adminThemeCloudStatus');
+      if (cloudStatus) cloudStatus.textContent = "⏳ Syncing theme selection to Cloud Sheet...";
+      await saveAdminAppConfigToCloud();
+      if (cloudStatus) cloudStatus.innerHTML = '<span class="text-emerald-700">✓ Theme locked to ' + MONTHLY_THEMES[monthIdx].name + '!</span>';
+    }
+
+    function adminPreviewNextTheme() {
+      const current = (typeof appState.activeThemeMonth === 'number') ? appState.activeThemeMonth : 10;
+      const nextMonth = (current + 1) % 12;
+      applyTheme(nextMonth, false);
+      showToast("Previewing " + MONTHLY_THEMES[nextMonth].title + " (Click button below to lock)", "info");
+    }
+
+    function updateAdminThemeUI() {
+      const current = (typeof appState.activeThemeMonth === 'number') ? appState.activeThemeMonth : 10;
+      const theme = MONTHLY_THEMES[current] || MONTHLY_THEMES[10];
+      const mode = appState.settings.themeStartupMode || 'dynamic_month';
+
+      const iconEl = document.getElementById('adminActiveThemeIcon');
+      const titleEl = document.getElementById('adminActiveThemeTitle');
+      const subEl = document.getElementById('adminActiveThemeSubtitle');
+      const seasonEl = document.getElementById('adminActiveThemeSeasonBadge');
+      const swatchesEl = document.getElementById('adminThemeSwatchesContainer');
+      const modeLabel = document.getElementById('adminThemeStartupLabel');
+      const btnDynamic = document.getElementById('btnThemeModeDynamic');
+      const btnRandom = document.getElementById('btnThemeModeRandom');
+      const gridEl = document.getElementById('adminMonthlyThemeGrid');
+
+      if (iconEl) iconEl.textContent = theme.icon;
+      if (titleEl) titleEl.textContent = theme.title;
+      if (subEl) subEl.textContent = theme.subtitle;
+      if (seasonEl) {
+        seasonEl.textContent = theme.season;
+        seasonEl.style.backgroundColor = theme.vars['--theme-light'];
+        seasonEl.style.color = theme.vars['--theme-royal-950'];
+      }
+
+      if (swatchesEl && theme.vars) {
+        swatchesEl.innerHTML = [
+          theme.vars['--theme-royal-950'],
+          theme.vars['--theme-royal-900'],
+          theme.vars['--theme-gold'],
+          theme.vars['--theme-cream']
+        ].map(hex => '<span class="w-4 h-4 rounded-full border border-white shadow-xs inline-block" style="background-color: ' + hex + ';" title="' + hex + '"></span>').join('');
+      }
+
+      if (modeLabel) {
+        if (mode === 'dynamic_month') {
+          modeLabel.textContent = "📅 Current Month (Default)";
+          modeLabel.className = "text-[11px] font-extrabold text-emerald-800";
+        } else if (mode === 'random') {
+          modeLabel.textContent = "🎲 Randomized on Launch";
+          modeLabel.className = "text-[11px] font-extrabold text-purple-800";
+        } else {
+          modeLabel.textContent = "📌 Locked to " + theme.name;
+          modeLabel.className = "text-[11px] font-extrabold text-amber-900";
+        }
+      }
+
+      if (btnDynamic) {
+        if (mode === 'dynamic_month') {
+          btnDynamic.className = "p-2 rounded-xl border-2 border-emerald-600 bg-emerald-50 text-emerald-950 font-black text-xs flex items-center justify-center gap-1.5 shadow-xs active:scale-[0.98]";
+        } else {
+          btnDynamic.className = "p-2 rounded-xl border-2 border-slate-300 bg-white text-slate-700 font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs active:scale-[0.98]";
+        }
+      }
+
+      if (btnRandom) {
+        if (mode === 'random') {
+          btnRandom.className = "p-2 rounded-xl border-2 border-purple-600 bg-purple-50 text-purple-950 font-black text-xs flex items-center justify-center gap-1.5 shadow-xs active:scale-[0.98]";
+        } else {
+          btnRandom.className = "p-2 rounded-xl border-2 border-slate-300 bg-white text-slate-700 font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs active:scale-[0.98]";
+        }
+      }
+
+      if (gridEl) {
+        gridEl.innerHTML = MONTHLY_THEMES.map(t => {
+          const isActive = t.id === current;
+          const isCurrentCal = t.id === new Date().getMonth();
+          const borderClass = isActive
+            ? 'border-2 border-amber-500 bg-amber-100/90 text-royal-950 shadow-sm ring-2 ring-amber-400/50'
+            : 'border border-slate-300 bg-white hover:bg-slate-50 text-slate-800';
+
+          return '<button type="button" onclick="adminSelectManualTheme(' + t.id + ')" '
+            + 'class="p-1.5 rounded-lg text-left flex flex-col justify-between min-h-[46px] transition-all ' + borderClass + ' active:scale-95">'
+            + '<div class="flex items-center justify-between w-full">'
+            + '<span class="text-xs">' + t.icon + '</span>'
+            + '<span class="w-2.5 h-2.5 rounded-full border border-slate-400" style="background-color: ' + t.vars['--theme-royal-900'] + ';"></span>'
+            + '</div>'
+            + '<div class="leading-tight">'
+            + '<div class="text-[11px] font-extrabold truncate">' + t.name + '</div>'
+            + '<div class="text-[9px] text-slate-500 font-bold truncate">' + (isCurrentCal ? '★ Current' : (isActive ? 'Active' : t.primaryName.split(' ')[0])) + '</div>'
+            + '</div>'
+            + '</button>';
+        }).join('');
+      }
+    }
+
     function saveAdminSettings() {
       const urlInput = document.getElementById('inputWebhookUrl');
       if (urlInput && urlInput.value.trim()) {
@@ -2467,6 +3032,7 @@
       const activeUrl = getActiveCloudUrl();
       const urlInput = document.getElementById('inputWebhookUrl');
       if (urlInput) urlInput.value = activeUrl;
+      updateAdminThemeUI();
 
       const hashBadge = document.getElementById('cloudUrlHashBadge');
       if (hashBadge) {
@@ -4341,7 +4907,9 @@
         eventStatus: appState.settings.eventStatus || 'RUNNING',
         eventEndTime: Number(appState.settings.eventEndTime) || 0,
         bonusQuestionsEnabled: appState.settings.bonusQuestionsEnabled !== false,
-        bonusPointsPerQuestion: Number(appState.settings.bonusPointsPerQuestion) || 5
+        bonusPointsPerQuestion: Number(appState.settings.bonusPointsPerQuestion) || 5,
+        themeStartupMode: appState.settings.themeStartupMode || 'dynamic_month',
+        themeManualMonth: appState.settings.themeManualMonth !== undefined ? Number(appState.settings.themeManualMonth) : 10
       });
 
       if (res.ok) {
@@ -5190,7 +5758,14 @@
             if (data.config.bonusPointsPerQuestion !== undefined) {
               appState.settings.bonusPointsPerQuestion = Number(data.config.bonusPointsPerQuestion) || 5;
             }
+            if (data.config.themeStartupMode !== undefined) {
+              appState.settings.themeStartupMode = String(data.config.themeStartupMode);
+            }
+            if (data.config.themeManualMonth !== undefined) {
+              appState.settings.themeManualMonth = Number(data.config.themeManualMonth);
+            }
             localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(appState.settings));
+            applyThemeOnCloudSync();
             updateSettingsUI();
             renderActivityOptionsUI();
             renderEventStatusAndTimerUI();

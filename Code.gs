@@ -261,7 +261,9 @@ function readAppConfigFromSheet(ss) {
     eventStatus: 'RUNNING',
     eventEndTime: 0,
     bonusQuestionsEnabled: true,
-    bonusPointsPerQuestion: 5
+    bonusPointsPerQuestion: 5,
+    themeStartupMode: 'dynamic_month',
+    themeManualMonth: 10
   };
   try {
     const props = PropertiesService.getScriptProperties();
@@ -275,10 +277,12 @@ function readAppConfigFromSheet(ss) {
       if (parsed.eventEndTime !== undefined) defaultCfg.eventEndTime = Number(parsed.eventEndTime) || 0;
       if (parsed.bonusQuestionsEnabled !== undefined) defaultCfg.bonusQuestionsEnabled = Boolean(parsed.bonusQuestionsEnabled);
       if (parsed.bonusPointsPerQuestion !== undefined) defaultCfg.bonusPointsPerQuestion = Number(parsed.bonusPointsPerQuestion) || 5;
+      if (parsed.themeStartupMode) defaultCfg.themeStartupMode = String(parsed.themeStartupMode);
+      if (parsed.themeManualMonth !== undefined) defaultCfg.themeManualMonth = Number(parsed.themeManualMonth);
     }
     const dashSheet = ss ? ss.getSheetByName(TAB_DASHBOARD) : null;
     if (dashSheet) {
-      const cfgValues = dashSheet.getRange('M3:N9').getValues();
+      const cfgValues = dashSheet.getRange('M3:N11').getValues();
       if (cfgValues[0] && cfgValues[0][0] === 'option1_KidToSaint' && cfgValues[0][1] !== '') {
         defaultCfg.option1_KidToSaint = String(cfgValues[0][1]).toLowerCase() !== 'false';
       }
@@ -300,6 +304,12 @@ function readAppConfigFromSheet(ss) {
       if (cfgValues[6] && cfgValues[6][0] === 'bonusPointsPerQuestion' && cfgValues[6][1] !== '') {
         defaultCfg.bonusPointsPerQuestion = Number(cfgValues[6][1]) || 5;
       }
+      if (cfgValues[7] && cfgValues[7][0] === 'themeStartupMode' && cfgValues[7][1] !== '') {
+        defaultCfg.themeStartupMode = String(cfgValues[7][1]);
+      }
+      if (cfgValues[8] && cfgValues[8][0] === 'themeManualMonth' && cfgValues[8][1] !== '') {
+        defaultCfg.themeManualMonth = Number(cfgValues[8][1]);
+      }
     }
   } catch (e) {}
   // Ensure at least one option is enabled
@@ -310,7 +320,7 @@ function readAppConfigFromSheet(ss) {
 }
 
 /**
- * Writes App Config to both Live_Leaderboard_And_Kid_Stats (M2:N9) and ScriptProperties
+ * Writes App Config to both Live_Leaderboard_And_Kid_Stats (M2:N11) and ScriptProperties
  */
 function writeAppConfigToSheet(ss, cfg) {
   const cleanCfg = {
@@ -320,7 +330,9 @@ function writeAppConfigToSheet(ss, cfg) {
     eventStatus: cfg.eventStatus === 'STOPPED' ? 'STOPPED' : 'RUNNING',
     eventEndTime: cfg.eventEndTime ? Number(cfg.eventEndTime) : 0,
     bonusQuestionsEnabled: cfg.bonusQuestionsEnabled !== false,
-    bonusPointsPerQuestion: cfg.bonusPointsPerQuestion ? Number(cfg.bonusPointsPerQuestion) : 5
+    bonusPointsPerQuestion: cfg.bonusPointsPerQuestion ? Number(cfg.bonusPointsPerQuestion) : 5,
+    themeStartupMode: cfg.themeStartupMode || 'dynamic_month',
+    themeManualMonth: cfg.themeManualMonth !== undefined ? Number(cfg.themeManualMonth) : 10
   };
   if (!cleanCfg.option1_KidToSaint && !cleanCfg.option2_SaintToKid) {
     cleanCfg.option1_KidToSaint = true;
@@ -333,14 +345,16 @@ function writeAppConfigToSheet(ss, cfg) {
   if (dashSheet) {
     dashSheet.getRange('M1').setValue('⚙ APP SETTINGS').setFontWeight('bold');
     dashSheet.getRange('M2:N2').setValues([['Setting_Key', 'Setting_Value']]).setFontWeight('bold').setBackground('#4a1c11').setFontColor('#fde68a');
-    dashSheet.getRange('M3:N9').setValues([
+    dashSheet.getRange('M3:N11').setValues([
       ['option1_KidToSaint', cleanCfg.option1_KidToSaint],
       ['option2_SaintToKid', cleanCfg.option2_SaintToKid],
       ['requireSecretPin', cleanCfg.requireSecretPin],
       ['eventStatus', cleanCfg.eventStatus],
       ['eventEndTime', cleanCfg.eventEndTime],
       ['bonusQuestionsEnabled', cleanCfg.bonusQuestionsEnabled],
-      ['bonusPointsPerQuestion', cleanCfg.bonusPointsPerQuestion]
+      ['bonusPointsPerQuestion', cleanCfg.bonusPointsPerQuestion],
+      ['themeStartupMode', cleanCfg.themeStartupMode],
+      ['themeManualMonth', cleanCfg.themeManualMonth]
     ]);
   }
   return cleanCfg;
