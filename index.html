@@ -713,6 +713,16 @@
             <p id="resultTimeStat" class="text-xl font-black text-amber-600">0s</p>
           </div>
         </div>
+        <!-- Out of Event Window Indication Notice -->
+        <div id="resultOutOfDateNotice" class="hidden rounded-xl p-2.5 bg-amber-50 border-2 border-amber-400 text-royal-950 text-xs font-bold space-y-0.5">
+          <p class="font-extrabold text-amber-900 flex items-center gap-1">
+            <span>🗓️</span> <span>Exhibition Submission (Outside Event Window)</span>
+          </p>
+          <p id="resultOutOfDateText" class="text-[11px] text-slate-700 leading-snug">
+            This score was recorded on the scoreboard in order position as an exhibition entry. Submissions within the official event window receive ranked prize awards.
+          </p>
+        </div>
+
         <p class="text-[11px] text-slate-500 font-semibold text-center">
           🔒 Individual correct answers are kept hidden so fellow parishioners can continue hunting fairly!
         </p>
@@ -883,6 +893,19 @@
                 class="min-h-[40px] px-2.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold text-xs active:scale-[0.98]">
                 Clear Time
               </button>
+            </div>
+
+            <!-- Official Event Window Date Picker (EST) -->
+            <div class="flex items-center justify-between gap-2 pt-2 border-t border-amber-400/30">
+              <div class="leading-tight">
+                <label for="inputAdminEventDate" class="text-xs font-black text-amber-200 uppercase tracking-wide">
+                  📅 Official Event Window Date (EST):
+                </label>
+                <p class="text-[10px] text-amber-100/70 font-semibold">Submissions outside this event window are unranked exhibitions on the scoreboard.</p>
+              </div>
+              <input id="inputAdminEventDate" type="date" value="2026-11-01"
+                onchange="adminUpdateEventDate(this.value)"
+                class="min-h-[36px] px-2.5 rounded-lg bg-white text-royal-950 font-bold text-xs border border-amber-300 shadow-inner" />
             </div>
           </div>
           <p id="adminEventSyncStatusText" class="text-[11px] font-bold text-amber-300/80"></p>
@@ -1310,7 +1333,7 @@
       <div id="adminTabPanel3" class="hidden w-full rounded-xl p-3 bg-white border-2 border-slate-300 space-y-3">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-2">
           <div>
-            <h3 class="text-base font-extrabold text-royal-900">Master Participant Scores (Google Sheet)</h3>
+            <h3 class="text-base font-extrabold text-royal-900">Master Participant Scores</h3>
             <p id="adminSubmissionsSummary" class="text-xs text-slate-600 font-semibold">0 Total Submissions</p>
           </div>
           <div class="flex flex-wrap gap-1.5">
@@ -2511,7 +2534,8 @@
         bonusQuestionsEnabled: true,
         bonusPointsPerQuestion: 5,
         themeStartupMode: 'dynamic_month',
-        themeManualMonth: 10
+        themeManualMonth: 10,
+        eventDate: '2026-11-01'
       },
       session: {
         active: false,
@@ -2733,7 +2757,8 @@
             bonusQuestionsEnabled: parsed.bonusQuestionsEnabled !== undefined ? Boolean(parsed.bonusQuestionsEnabled) : true,
             bonusPointsPerQuestion: Number(parsed.bonusPointsPerQuestion) || 5,
             themeStartupMode: parsed.themeStartupMode || 'dynamic_month',
-            themeManualMonth: parsed.themeManualMonth !== undefined ? Number(parsed.themeManualMonth) : 10
+            themeManualMonth: parsed.themeManualMonth !== undefined ? Number(parsed.themeManualMonth) : 10,
+            eventDate: parsed.eventDate || '2026-11-01'
           };
         }
 
@@ -3032,6 +3057,8 @@
       const activeUrl = getActiveCloudUrl();
       const urlInput = document.getElementById('inputWebhookUrl');
       if (urlInput) urlInput.value = activeUrl;
+      const eventDateInput = document.getElementById('inputAdminEventDate');
+      if (eventDateInput) eventDateInput.value = appState.settings.eventDate || '2026-11-01';
       updateAdminThemeUI();
 
       const hashBadge = document.getElementById('cloudUrlHashBadge');
@@ -4300,6 +4327,19 @@
         document.getElementById('resultAttemptedStat').textContent = `${record.Total_Attempted}`;
         document.getElementById('resultTimeStat').textContent = `${record.Time_Taken_Sec}s`;
         updatePersonalSyncBadge('Saved Locally - Pending Sync', false);
+
+        // Check if submitted outside event date
+        const outNoticeEl = document.getElementById('resultOutOfDateNotice');
+        const outTextEl = document.getElementById('resultOutOfDateText');
+        if (outNoticeEl && outTextEl) {
+          const isOut = isSubmissionOutOfEventDate(record);
+          if (isOut) {
+            outNoticeEl.classList.remove('hidden');
+            outTextEl.textContent = "This score was submitted at " + formatSubTimeDisplay(record) + ". Because it was completed outside the official event window, your entry is placed in order position on the scoreboard as an unranked exhibition.";
+          } else {
+            outNoticeEl.classList.add('hidden');
+          }
+        }
       }
 
       switchView('results');
@@ -4515,6 +4555,177 @@
       refreshCloudData(false);
     }
 
+    /**************************************************************
+     * EVENT DATE & OUT-OF-DATE SUBMISSION DETECTION
+     **************************************************************/
+    function getSubmissionDateEst(sub) {
+      if (!sub) return "";
+      const ts = sub.Timestamp;
+      if (typeof ts === "string") {
+        const match = ts.match(/^(\d{4}-\d{2}-\d{2})/);
+        if (match) return match[1];
+        const mdyMatch = ts.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+        if (mdyMatch) {
+          const y = mdyMatch[3];
+          const m = mdyMatch[1].padStart(2, "0");
+          const d = mdyMatch[2].padStart(2, "0");
+          return y + "-" + m + "-" + d;
+        }
+      }
+      const id = sub.Submission_ID || "";
+      const m = String(id).match(/SUB-(\d{10,13})/i);
+      if (m) {
+        const epoch = Number(m[1]);
+        if (epoch > 1600000000000 && epoch < 2500000000000) {
+          try {
+            const parts = new Intl.DateTimeFormat("en-US", {
+              timeZone: TIMEZONE_EST,
+              year: "numeric",
+              month: "2-digit",
+              day: "2-digit"
+            }).formatToParts(new Date(epoch));
+            const p = {};
+            parts.forEach(x => p[x.type] = x.value);
+            return p.year + "-" + p.month + "-" + p.day;
+          } catch (e) {}
+        }
+      }
+      if (ts) {
+        try {
+          const d = new Date(ts);
+          if (!isNaN(d.getTime())) {
+            const parts = new Intl.DateTimeFormat("en-US", {
+              timeZone: TIMEZONE_EST,
+              year: "numeric",
+              month: "2-digit",
+              day: "2-digit"
+            }).formatToParts(d);
+            const p = {};
+            parts.forEach(x => p[x.type] = x.value);
+            return p.year + "-" + p.month + "-" + p.day;
+          }
+        } catch (e) {}
+      }
+      return "";
+    }
+
+    function isSubmissionOutOfEventDate(sub) {
+      if (!sub) return false;
+      if (sub.isOutOfDate === true || sub.Is_Out_Of_Date === true || sub.Out_Of_Date === true) {
+        return true;
+      }
+      const officialDate = (appState.settings && appState.settings.eventDate) ? appState.settings.eventDate : "2026-11-01";
+      const subDate = getSubmissionDateEst(sub);
+      if (!subDate) return false;
+      const target = String(officialDate || "2026-11-01").trim();
+      const allowed = target.split(",").map(s => s.trim()).filter(Boolean);
+      return !allowed.includes(subDate);
+    }
+
+    function formatSubTimeDisplay(sub) {
+      if (!sub) return '';
+      const ts = sub.Timestamp;
+      const id = sub.Submission_ID || '';
+
+      // 1. Try SUB-<epoch> ID (highest precision epoch timestamp)
+      const m = String(id).match(/SUB-(\d{10,13})/i);
+      if (m) {
+        const epoch = Number(m[1]);
+        if (epoch > 1600000000000 && epoch < 2500000000000) {
+          try {
+            const parts = new Intl.DateTimeFormat('en-US', {
+              timeZone: TIMEZONE_EST,
+              month: 'short',
+              day: 'numeric',
+              hour: 'numeric',
+              minute: '2-digit',
+              hour12: true
+            }).formatToParts(new Date(epoch));
+            const p = {};
+            parts.forEach(x => p[x.type] = x.value);
+            return p.month + ' ' + p.day + ', ' + p.hour + ':' + p.minute + ' ' + p.dayPeriod + ' EST';
+          } catch (e) {}
+        }
+      }
+
+      // 2. Parse string timestamp: e.g. "2026-11-01 21:21:15 EST" or "2026-11-01 21:21:15"
+      if (typeof ts === 'string') {
+        const ymdMatch = ts.match(/^(\d{4})-(\d{2})-(\d{2})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+        if (ymdMatch) {
+          const mo = Number(ymdMatch[2]);
+          const da = Number(ymdMatch[3]);
+          let hr = Number(ymdMatch[4]);
+          const mi = ymdMatch[5];
+          const ampm = hr >= 12 ? 'PM' : 'AM';
+          hr = hr % 12;
+          if (hr === 0) hr = 12;
+          const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+          return months[mo - 1] + ' ' + da + ', ' + hr + ':' + mi + ' ' + ampm + ' EST';
+        }
+
+        const mdyMatch = ts.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})/);
+        if (mdyMatch) {
+          const mo = Number(mdyMatch[1]);
+          const da = Number(mdyMatch[2]);
+          let hr = Number(mdyMatch[4]);
+          const mi = mdyMatch[5];
+          const ampm = hr >= 12 ? 'PM' : 'AM';
+          hr = hr % 12;
+          if (hr === 0) hr = 12;
+          const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+          return months[mo - 1] + ' ' + da + ', ' + hr + ':' + mi + ' ' + ampm + ' EST';
+        }
+
+        try {
+          let d = new Date(ts);
+          if (isNaN(d.getTime())) d = new Date(ts.replace(/-/g, '/'));
+          if (!isNaN(d.getTime())) {
+            const parts = new Intl.DateTimeFormat('en-US', {
+              timeZone: TIMEZONE_EST,
+              month: 'short',
+              day: 'numeric',
+              hour: 'numeric',
+              minute: '2-digit',
+              hour12: true
+            }).formatToParts(d);
+            const p = {};
+            parts.forEach(x => p[x.type] = x.value);
+            return p.month + ' ' + p.day + ', ' + p.hour + ':' + p.minute + ' ' + p.dayPeriod + ' EST';
+          }
+        } catch (e) {}
+      }
+
+      return String(ts || '');
+    }
+
+    function formatSubDateDisplay(sub) {
+      const dateStr = getSubmissionDateEst(sub);
+      if (!dateStr) return "Outside Event Date";
+      try {
+        const parts = dateStr.split("-");
+        if (parts.length === 3) {
+          const year = parts[0];
+          const month = Number(parts[1]) - 1;
+          const day = Number(parts[2]);
+          const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+          return months[month] + " " + day + ", " + year;
+        }
+      } catch (e) {}
+      return dateStr;
+    }
+
+    function adminUpdateEventDate(val) {
+      const cleanVal = String(val || "").trim();
+      if (!cleanVal) return;
+      appState.settings.eventDate = cleanVal;
+      saveAdminSettings();
+      renderLeaderboardAndAppreciation();
+      renderAdminScoresTable();
+      renderAdminPodiumAndTicker();
+      showToast("Official Event Window set to " + cleanVal + "!", "info");
+      saveAdminAppConfigToCloud();
+    }
+
     function getSortedSubmissions(submissionsArray) {
       return [...submissionsArray].sort((a, b) => {
         const scoreA = Number(a.Total_Score !== undefined && a.Total_Score !== '' ? a.Total_Score : (Number(a.Correct_Score || 0) + Number(a.Bonus_Points || 0)));
@@ -4547,33 +4758,56 @@
 
       if (lbContainer) {
         if (top10.length === 0) {
-          lbContainer.innerHTML = `
-            <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 text-center text-xs font-bold text-slate-500">
-              No scores submitted yet! Be the first parishioner on the leaderboard!
-            </div>
-          `;
+          lbContainer.innerHTML = '<div class="p-4 rounded-xl bg-slate-50 border border-slate-200 text-center text-xs font-bold text-slate-500">No scores submitted yet! Be the first parishioner on the leaderboard!</div>';
         } else {
-          lbContainer.innerHTML = top10.map((sub, idx) => {
-            const rank = idx + 1;
-            const medal = rank === 1 ? '🥇' : (rank === 2 ? '🥈' : (rank === 3 ? '🥉' : `#${rank}`));
-            const rowBg = rank <= 3 ? 'bg-amber-50/90 border-amber-300' : 'bg-slate-50 border-slate-200';
-            return `
-              <div class="w-full rounded-xl p-2.5 border ${rowBg} flex items-center justify-between gap-2">
-                <div class="flex items-center gap-2 min-w-0">
-                  <span class="w-8 h-8 rounded-lg bg-royal-900 text-amber-300 font-black text-xs flex items-center justify-center shrink-0">${medal}</span>
-                  <div class="truncate">
-                    <p class="text-sm font-extrabold text-royal-900 truncate">${escapeHtml(sub.Participant_Name)}</p>
-                    <p class="text-[11px] font-semibold text-slate-500">${escapeHtml(sub.Game_Mode)} • ${sub.Total_Attempted} Found</p>
-                  </div>
-                </div>
-                <div class="text-right shrink-0">
-                  <p class="text-sm font-black text-emerald-700">${sub.Total_Score !== undefined ? sub.Total_Score : sub.Correct_Score} pts</p>
-                  ${sub.Bonus_Points ? `<p class="text-[10px] font-extrabold text-amber-600">+${sub.Bonus_Points} bonus</p>` : ''}
-                  <p class="text-[11px] font-bold text-amber-700">⏱ ${sub.Time_Taken_Sec}s</p>
-                </div>
-              </div>
-            `;
-          }).join('');
+          let officialRank = 0;
+          lbContainer.innerHTML = top10.map((sub) => {
+            const isOutOfDate = isSubmissionOutOfEventDate(sub);
+            let medal = "";
+            let rowBg = "";
+
+            if (isOutOfDate) {
+              // NO rank number, but kept in exact ordered position!
+              medal = "🗓️";
+              rowBg = "bg-slate-50/95 border-amber-300/80";
+            } else {
+              officialRank++;
+              medal = officialRank === 1 ? "🥇" : (officialRank === 2 ? "🥈" : (officialRank === 3 ? "🥉" : "#" + officialRank));
+              rowBg = officialRank <= 3 ? "bg-amber-50/90 border-amber-300" : "bg-slate-50 border-slate-200";
+            }
+
+            const totalPts = (sub.Total_Score !== undefined && sub.Total_Score !== '' && !isNaN(Number(sub.Total_Score)))
+              ? Number(sub.Total_Score)
+              : (Number(sub.Correct_Score || 0) + Number(sub.Bonus_Points || 0));
+            const totalScoreText = totalPts + " pts";
+            const bonusText = sub.Bonus_Points ? ('<p class="text-[10px] font-extrabold text-amber-600">+' + sub.Bonus_Points + ' bonus</p>') : "";
+            const badgeClass = isOutOfDate ? "bg-slate-200 text-slate-700 border border-slate-400" : "bg-royal-900 text-amber-300";
+            const badgeTitle = isOutOfDate ? "Submitted outside event window — unranked" : ("Rank " + officialRank);
+            const outOfDatePill = isOutOfDate ? '<span class="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-amber-200/80 text-royal-950 border border-amber-400 shrink-0">Outside Event Window</span>' : "";
+
+            // Compact 2-line layout: inline note on the subtitle line so height matches standard name rows perfectly
+            const subDetailsText = isOutOfDate
+              ? '<span class="text-amber-800 font-bold">🕒 Submitted: ' + formatSubTimeDisplay(sub) + '</span> • <span class="hidden sm:inline">' + escapeHtml(sub.Game_Mode) + ' • </span>' + sub.Total_Attempted + ' Found'
+              : escapeHtml(sub.Game_Mode) + ' • ' + sub.Total_Attempted + ' Found';
+
+            return '<div class="w-full rounded-xl p-2.5 border ' + rowBg + ' flex items-center justify-between gap-2 shadow-xs transition-all">'
+              + '<div class="flex items-center gap-2 min-w-0">'
+              + '<span class="w-8 h-8 rounded-lg ' + badgeClass + ' font-black text-xs flex items-center justify-center shrink-0 shadow-xs" title="' + badgeTitle + '">' + medal + '</span>'
+              + '<div class="truncate">'
+              + '<p class="text-sm font-extrabold text-royal-900 truncate flex items-center gap-1.5">'
+              + '<span>' + escapeHtml(sub.Participant_Name) + '</span>'
+              + outOfDatePill
+              + '</p>'
+              + '<p class="text-[11px] font-semibold text-slate-500 truncate" title="Submitted: ' + (isOutOfDate ? formatSubTimeDisplay(sub) : '') + '">' + subDetailsText + '</p>'
+              + '</div>'
+              + '</div>'
+              + '<div class="text-right shrink-0">'
+              + '<p class="text-sm font-black text-emerald-700">' + totalScoreText + '</p>'
+              + bonusText
+              + '<p class="text-[11px] font-bold text-amber-700">⏱ ' + sub.Time_Taken_Sec + 's</p>'
+              + '</div>'
+              + '</div>';
+          }).join("");
         }
       }
 
@@ -4909,7 +5143,8 @@
         bonusQuestionsEnabled: appState.settings.bonusQuestionsEnabled !== false,
         bonusPointsPerQuestion: Number(appState.settings.bonusPointsPerQuestion) || 5,
         themeStartupMode: appState.settings.themeStartupMode || 'dynamic_month',
-        themeManualMonth: appState.settings.themeManualMonth !== undefined ? Number(appState.settings.themeManualMonth) : 10
+        themeManualMonth: appState.settings.themeManualMonth !== undefined ? Number(appState.settings.themeManualMonth) : 10,
+        eventDate: appState.settings.eventDate || '2026-11-01'
       });
 
       if (res.ok) {
@@ -5764,6 +5999,9 @@
             if (data.config.themeManualMonth !== undefined) {
               appState.settings.themeManualMonth = Number(data.config.themeManualMonth);
             }
+            if (data.config.eventDate !== undefined) {
+              appState.settings.eventDate = String(data.config.eventDate);
+            }
             localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(appState.settings));
             applyThemeOnCloudSync();
             updateSettingsUI();
@@ -5993,10 +6231,21 @@
         'Matched_Bib_IDs',
         'Sync_Status'
       ];
-      const sorted = getSortedSubmissions(appState.submissions).map((sub, idx) => ({
-        Rank: idx + 1,
-        ...sub
-      }));
+      let officialRank = 0;
+      const sorted = getSortedSubmissions(appState.submissions).map((sub) => {
+        const isOutOfDate = isSubmissionOutOfEventDate(sub);
+        let rankValue = "";
+        if (isOutOfDate) {
+          rankValue = "Unranked (Outside Event Window)";
+        } else {
+          officialRank++;
+          rankValue = officialRank;
+        }
+        return {
+          Rank: rankValue,
+          ...sub
+        };
+      });
       const csv = toCsvString(headers, sorted);
       downloadCsvFile('whos_that_saint_prizes.csv', csv);
       showToast("Exported whos_that_saint_prizes.csv!", "success");
@@ -6018,33 +6267,51 @@
         return;
       }
 
-      container.innerHTML = sorted.map((sub, idx) => {
+      let officialRank = 0;
+      container.innerHTML = sorted.map((sub) => {
         const isSynced = sub.Sync_Status === 'Synced to Cloud';
-        const totalPts = sub.Total_Score !== undefined ? sub.Total_Score : (Number(sub.Correct_Score || 0) + Number(sub.Bonus_Points || 0));
-        return `
-          <div class="w-full rounded-xl p-2.5 bg-slate-50 border border-slate-300 flex items-center justify-between gap-2 text-xs">
-            <div class="min-w-0">
-              <p class="font-extrabold text-royal-900 truncate">
-                #${idx + 1} — ${escapeHtml(sub.Participant_Name)}
-                <span class="text-slate-500 font-semibold">(${escapeHtml(sub.Family_or_Phone || 'No Phone')})</span>
-              </p>
-              <p class="text-[11px] text-slate-600 font-medium">
-                ${escapeHtml(sub.Game_Mode)} • <strong>${totalPts} pts</strong> (Base: ${sub.Correct_Score}${sub.Bonus_Points ? `, Bonus: +${sub.Bonus_Points}` : ''}) • Attempted: ${sub.Total_Attempted} (${sub.Accuracy_Percent}%) • Time: ${sub.Time_Taken_Sec}s
-              </p>
-              ${sub.Timestamp ? `<p class="text-[10px] text-slate-500 font-mono">🕒 ${escapeHtml(formatEstTimestamp(sub))}</p>` : ''}
-            </div>
-            <span class="px-2 py-1 rounded-lg font-extrabold shrink-0 ${isSynced ? 'bg-emerald-100 text-emerald-900' : 'bg-amber-100 text-amber-900'}">
-              ${isSynced ? '☁ Cloud' : '💾 Local'}
-            </span>
-          </div>
-        `;
-      }).join('');
+        const isOutOfDate = isSubmissionOutOfEventDate(sub);
+        const totalPts = (sub.Total_Score !== undefined && sub.Total_Score !== '' && !isNaN(Number(sub.Total_Score)))
+          ? Number(sub.Total_Score)
+          : (Number(sub.Correct_Score || 0) + Number(sub.Bonus_Points || 0));
+        let titlePrefix = "";
+        if (isOutOfDate) {
+          titlePrefix = "🗓️ ";
+        } else {
+          officialRank++;
+          titlePrefix = "#" + officialRank + " — ";
+        }
+        const cardBg = isOutOfDate ? "bg-amber-50/70 border-amber-300" : "bg-slate-50 border-slate-300";
+        const outPill = isOutOfDate ? '<span class="ml-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-200 text-royal-950 border border-amber-400">Outside Event Window</span>' : "";
+        const tsNote = isOutOfDate ? ' • <strong class="text-amber-800">Unranked Exhibition</strong>' : "";
+        const bonusText = sub.Bonus_Points ? (', Bonus: +' + sub.Bonus_Points) : '';
+        const syncBadgeClass = isSynced ? "bg-emerald-100 text-emerald-900" : "bg-amber-100 text-amber-900";
+        const syncBadgeText = isSynced ? "☁ Cloud" : "💾 Local";
+        const tsLine = sub.Timestamp ? ('<p class="text-[10px] text-slate-500 font-mono">🕒 ' + escapeHtml(formatEstTimestamp(sub)) + tsNote + '</p>') : '';
+
+        return '<div class="w-full rounded-xl p-2.5 ' + cardBg + ' border flex items-center justify-between gap-2 text-xs">'
+          + '<div class="min-w-0">'
+          + '<p class="font-extrabold text-royal-900 truncate">'
+          + titlePrefix + escapeHtml(sub.Participant_Name)
+          + ' <span class="text-slate-500 font-semibold">(' + escapeHtml(sub.Family_or_Phone || "No Phone") + ')</span>'
+          + outPill
+          + '</p>'
+          + '<p class="text-[11px] text-slate-600 font-medium">'
+          + escapeHtml(sub.Game_Mode) + ' • <strong>' + totalPts + ' pts</strong> (Base: ' + sub.Correct_Score + bonusText + ') • Attempted: ' + sub.Total_Attempted + ' (' + sub.Accuracy_Percent + '%) • Time: ' + sub.Time_Taken_Sec + 's'
+          + '</p>'
+          + tsLine
+          + '</div>'
+          + '<span class="px-2 py-1 rounded-lg font-extrabold shrink-0 ' + syncBadgeClass + '">' + syncBadgeText + '</span>'
+          + '</div>';
+      }).join("");
     }
 
     function renderAdminPodiumAndTicker() {
       const podiumEl = document.getElementById('adminPodiumContainer');
       const tickerEl = document.getElementById('adminHonorRollTicker');
       const sorted = getSortedSubmissions(appState.submissions);
+      // Official event participants receive the 1st, 2nd, 3rd podium awards
+      const officialWinners = sorted.filter(s => !isSubmissionOutOfEventDate(s));
 
       if (podiumEl) {
         const labels = [
@@ -6053,7 +6320,7 @@
           { place: '🥉 3rd Place Winner', bg: 'bg-orange-50 border-orange-300 text-orange-950' }
         ];
         podiumEl.innerHTML = [0, 1, 2].map(i => {
-          const winner = sorted[i];
+          const winner = officialWinners[i];
           const meta = labels[i];
           if (!winner) {
             return `

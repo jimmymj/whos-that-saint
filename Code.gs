@@ -263,7 +263,8 @@ function readAppConfigFromSheet(ss) {
     bonusQuestionsEnabled: true,
     bonusPointsPerQuestion: 5,
     themeStartupMode: 'dynamic_month',
-    themeManualMonth: 10
+    themeManualMonth: 10,
+    eventDate: '2026-11-01'
   };
   try {
     const props = PropertiesService.getScriptProperties();
@@ -279,10 +280,11 @@ function readAppConfigFromSheet(ss) {
       if (parsed.bonusPointsPerQuestion !== undefined) defaultCfg.bonusPointsPerQuestion = Number(parsed.bonusPointsPerQuestion) || 5;
       if (parsed.themeStartupMode) defaultCfg.themeStartupMode = String(parsed.themeStartupMode);
       if (parsed.themeManualMonth !== undefined) defaultCfg.themeManualMonth = Number(parsed.themeManualMonth);
+      if (parsed.eventDate) defaultCfg.eventDate = String(parsed.eventDate);
     }
     const dashSheet = ss ? ss.getSheetByName(TAB_DASHBOARD) : null;
     if (dashSheet) {
-      const cfgValues = dashSheet.getRange('M3:N11').getValues();
+      const cfgValues = dashSheet.getRange('M3:N12').getValues();
       if (cfgValues[0] && cfgValues[0][0] === 'option1_KidToSaint' && cfgValues[0][1] !== '') {
         defaultCfg.option1_KidToSaint = String(cfgValues[0][1]).toLowerCase() !== 'false';
       }
@@ -310,6 +312,9 @@ function readAppConfigFromSheet(ss) {
       if (cfgValues[8] && cfgValues[8][0] === 'themeManualMonth' && cfgValues[8][1] !== '') {
         defaultCfg.themeManualMonth = Number(cfgValues[8][1]);
       }
+      if (cfgValues[9] && cfgValues[9][0] === 'eventDate' && cfgValues[9][1] !== '') {
+        defaultCfg.eventDate = String(cfgValues[9][1]);
+      }
     }
   } catch (e) {}
   // Ensure at least one option is enabled
@@ -332,7 +337,8 @@ function writeAppConfigToSheet(ss, cfg) {
     bonusQuestionsEnabled: cfg.bonusQuestionsEnabled !== false,
     bonusPointsPerQuestion: cfg.bonusPointsPerQuestion ? Number(cfg.bonusPointsPerQuestion) : 5,
     themeStartupMode: cfg.themeStartupMode || 'dynamic_month',
-    themeManualMonth: cfg.themeManualMonth !== undefined ? Number(cfg.themeManualMonth) : 10
+    themeManualMonth: cfg.themeManualMonth !== undefined ? Number(cfg.themeManualMonth) : 10,
+    eventDate: cfg.eventDate || '2026-11-01'
   };
   if (!cleanCfg.option1_KidToSaint && !cleanCfg.option2_SaintToKid) {
     cleanCfg.option1_KidToSaint = true;
@@ -345,7 +351,7 @@ function writeAppConfigToSheet(ss, cfg) {
   if (dashSheet) {
     dashSheet.getRange('M1').setValue('⚙ APP SETTINGS').setFontWeight('bold');
     dashSheet.getRange('M2:N2').setValues([['Setting_Key', 'Setting_Value']]).setFontWeight('bold').setBackground('#4a1c11').setFontColor('#fde68a');
-    dashSheet.getRange('M3:N11').setValues([
+    dashSheet.getRange('M3:N12').setValues([
       ['option1_KidToSaint', cleanCfg.option1_KidToSaint],
       ['option2_SaintToKid', cleanCfg.option2_SaintToKid],
       ['requireSecretPin', cleanCfg.requireSecretPin],
@@ -354,7 +360,8 @@ function writeAppConfigToSheet(ss, cfg) {
       ['bonusQuestionsEnabled', cleanCfg.bonusQuestionsEnabled],
       ['bonusPointsPerQuestion', cleanCfg.bonusPointsPerQuestion],
       ['themeStartupMode', cleanCfg.themeStartupMode],
-      ['themeManualMonth', cleanCfg.themeManualMonth]
+      ['themeManualMonth', cleanCfg.themeManualMonth],
+      ['eventDate', cleanCfg.eventDate]
     ]);
   }
   return cleanCfg;
@@ -547,6 +554,37 @@ function doGet(e) {
       const scoreDiff = scoreB - scoreA;
       if (scoreDiff !== 0) return scoreDiff;
       return Number(a.Time_Taken_Sec || 999999) - Number(b.Time_Taken_Sec || 999999);
+    });
+
+    function isScoreOutOfDate(sub, officialEventDate) {
+      const targetDate = String(officialEventDate || '2026-11-01').trim();
+      const ts = String(sub.Timestamp || '');
+      const match = ts.match(/^(\d{4}-\d{2}-\d{2})/);
+      let subDate = '';
+      if (match) {
+        subDate = match[1];
+      } else {
+        const mdyMatch = ts.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+        if (mdyMatch) {
+          subDate = mdyMatch[3] + '-' + mdyMatch[1].padStart(2, '0') + '-' + mdyMatch[2].padStart(2, '0');
+        }
+      }
+      if (!subDate) {
+        const idMatch = String(sub.Submission_ID || '').match(/SUB-(\d{10,13})/i);
+        if (idMatch) {
+          const ep = Number(idMatch[1]);
+          if (ep > 1600000000000 && ep < 2500000000000) {
+            subDate = Utilities.formatDate(new Date(ep), TIMEZONE_EST, 'yyyy-MM-dd');
+          }
+        }
+      }
+      if (!subDate) return false;
+      const allowed = targetDate.split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+      return allowed.indexOf(subDate) === -1;
+    }
+
+    allScores.forEach(function(s) {
+      s.isOutOfDate = isScoreOutOfDate(s, appConfig.eventDate);
     });
 
     let bonusQuestions = [];
