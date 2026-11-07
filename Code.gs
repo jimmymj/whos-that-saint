@@ -214,6 +214,69 @@ const DEFAULT_BONUS_QUESTIONS = [
  */
 const TIMEZONE_EST = 'America/New_York';
 
+const MONTH_MAP_APPSCRIPT = {
+  jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06',
+  jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12',
+  january: '01', february: '02', march: '03', april: '04', may: '05', june: '06',
+  july: '07', august: '08', september: '09', october: '10', november: '11', december: '12'
+};
+
+function sanitizeConfigDate(val) {
+  if (!val) return '2026-11-01';
+  if (val instanceof Date) {
+    try {
+      return Utilities.formatDate(val, TIMEZONE_EST, 'yyyy-MM-dd');
+    } catch (e) {}
+  }
+  const s = String(val).trim();
+  const ymd = s.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (ymd) return ymd[1] + '-' + ymd[2].padStart(2, '0') + '-' + ymd[3].padStart(2, '0');
+  const mdy = s.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (mdy) return mdy[3] + '-' + mdy[1].padStart(2, '0') + '-' + mdy[2].padStart(2, '0');
+  const textMatch = s.match(/(?:[A-Za-z]{3,9},?\s+)?([A-Za-z]{3,9})\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+(\d{4})/i);
+  if (textMatch) {
+    const mStr = textMatch[1].toLowerCase();
+    const mo = MONTH_MAP_APPSCRIPT[mStr];
+    if (mo) {
+      const day = textMatch[2].padStart(2, '0');
+      const year = textMatch[3];
+      return year + '-' + mo + '-' + day;
+    }
+  }
+  return '2026-11-01';
+}
+
+function sanitizeConfigTime(val) {
+  if (val === undefined || val === null || val === '') return '';
+  if (val instanceof Date) {
+    try {
+      return Utilities.formatDate(val, TIMEZONE_EST, 'HH:mm');
+    } catch (e) {}
+  }
+  const s = String(val).trim();
+  if (!s) return '';
+
+  const ampmMatch = s.match(/(\d{1,2}):(\d{2})(?::\d{2})?\s*([ap]m)/i);
+  if (ampmMatch) {
+    let h = parseInt(ampmMatch[1], 10);
+    const m = ampmMatch[2];
+    const ampm = ampmMatch[3].toUpperCase();
+    if (ampm === 'PM' && h < 12) h += 12;
+    if (ampm === 'AM' && h === 12) h = 0;
+    return (h < 10 ? '0' + h : String(h)) + ':' + m;
+  }
+
+  const tMatch = s.match(/(?:^|\b|\s)(\d{1,2}):(\d{2})(?::\d{2})?(?:$|\b|\s)/);
+  if (tMatch) {
+    const h = parseInt(tMatch[1], 10);
+    const m = tMatch[2];
+    if (h >= 0 && h <= 23 && parseInt(m, 10) >= 0 && parseInt(m, 10) <= 59) {
+      return (h < 10 ? '0' + h : String(h)) + ':' + m;
+    }
+  }
+  return '';
+}
+
 function formatEstDateForSheet(d) {
   try {
     return Utilities.formatDate(d || new Date(), TIMEZONE_EST, 'yyyy-MM-dd HH:mm:ss') + ' EST';
@@ -264,7 +327,8 @@ function readAppConfigFromSheet(ss) {
     bonusPointsPerQuestion: 5,
     themeStartupMode: 'dynamic_month',
     themeManualMonth: 10,
-    eventDate: '2026-11-01'
+    eventDate: '2026-11-01',
+    eventTime: '21:00'
   };
   try {
     const props = PropertiesService.getScriptProperties();
@@ -280,11 +344,12 @@ function readAppConfigFromSheet(ss) {
       if (parsed.bonusPointsPerQuestion !== undefined) defaultCfg.bonusPointsPerQuestion = Number(parsed.bonusPointsPerQuestion) || 5;
       if (parsed.themeStartupMode) defaultCfg.themeStartupMode = String(parsed.themeStartupMode);
       if (parsed.themeManualMonth !== undefined) defaultCfg.themeManualMonth = Number(parsed.themeManualMonth);
-      if (parsed.eventDate) defaultCfg.eventDate = String(parsed.eventDate);
+      if (parsed.eventDate) defaultCfg.eventDate = sanitizeConfigDate(parsed.eventDate);
+      if (parsed.eventTime !== undefined) defaultCfg.eventTime = sanitizeConfigTime(parsed.eventTime);
     }
     const dashSheet = ss ? ss.getSheetByName(TAB_DASHBOARD) : null;
     if (dashSheet) {
-      const cfgValues = dashSheet.getRange('M3:N12').getValues();
+      const cfgValues = dashSheet.getRange('M3:N13').getValues();
       if (cfgValues[0] && cfgValues[0][0] === 'option1_KidToSaint' && cfgValues[0][1] !== '') {
         defaultCfg.option1_KidToSaint = String(cfgValues[0][1]).toLowerCase() !== 'false';
       }
@@ -313,7 +378,10 @@ function readAppConfigFromSheet(ss) {
         defaultCfg.themeManualMonth = Number(cfgValues[8][1]);
       }
       if (cfgValues[9] && cfgValues[9][0] === 'eventDate' && cfgValues[9][1] !== '') {
-        defaultCfg.eventDate = String(cfgValues[9][1]);
+        defaultCfg.eventDate = sanitizeConfigDate(cfgValues[9][1]);
+      }
+      if (cfgValues[10] && cfgValues[10][0] === 'eventTime') {
+        defaultCfg.eventTime = sanitizeConfigTime(cfgValues[10][1]);
       }
     }
   } catch (e) {}
@@ -338,7 +406,8 @@ function writeAppConfigToSheet(ss, cfg) {
     bonusPointsPerQuestion: cfg.bonusPointsPerQuestion ? Number(cfg.bonusPointsPerQuestion) : 5,
     themeStartupMode: cfg.themeStartupMode || 'dynamic_month',
     themeManualMonth: cfg.themeManualMonth !== undefined ? Number(cfg.themeManualMonth) : 10,
-    eventDate: cfg.eventDate || '2026-11-01'
+    eventDate: sanitizeConfigDate(cfg.eventDate || '2026-11-01'),
+    eventTime: sanitizeConfigTime(cfg.eventTime)
   };
   if (!cleanCfg.option1_KidToSaint && !cleanCfg.option2_SaintToKid) {
     cleanCfg.option1_KidToSaint = true;
@@ -351,7 +420,7 @@ function writeAppConfigToSheet(ss, cfg) {
   if (dashSheet) {
     dashSheet.getRange('M1').setValue('⚙ APP SETTINGS').setFontWeight('bold');
     dashSheet.getRange('M2:N2').setValues([['Setting_Key', 'Setting_Value']]).setFontWeight('bold').setBackground('#4a1c11').setFontColor('#fde68a');
-    dashSheet.getRange('M3:N12').setValues([
+    dashSheet.getRange('M3:N13').setValues([
       ['option1_KidToSaint', cleanCfg.option1_KidToSaint],
       ['option2_SaintToKid', cleanCfg.option2_SaintToKid],
       ['requireSecretPin', cleanCfg.requireSecretPin],
@@ -361,7 +430,8 @@ function writeAppConfigToSheet(ss, cfg) {
       ['bonusPointsPerQuestion', cleanCfg.bonusPointsPerQuestion],
       ['themeStartupMode', cleanCfg.themeStartupMode],
       ['themeManualMonth', cleanCfg.themeManualMonth],
-      ['eventDate', cleanCfg.eventDate]
+      ['eventDate', cleanCfg.eventDate],
+      ['eventTime', cleanCfg.eventTime]
     ]);
   }
   return cleanCfg;
@@ -556,35 +626,62 @@ function doGet(e) {
       return Number(a.Time_Taken_Sec || 999999) - Number(b.Time_Taken_Sec || 999999);
     });
 
-    function isScoreOutOfDate(sub, officialEventDate) {
-      const targetDate = String(officialEventDate || '2026-11-01').trim();
-      const ts = String(sub.Timestamp || '');
-      const match = ts.match(/^(\d{4}-\d{2}-\d{2})/);
+    function isScoreOutOfDate(sub, officialEventDate, officialEventTime) {
+      const targetDate = sanitizeConfigDate(officialEventDate);
+      const targetTime = officialEventTime ? sanitizeConfigTime(officialEventTime) : '';
       let subDate = '';
-      if (match) {
-        subDate = match[1];
-      } else {
-        const mdyMatch = ts.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-        if (mdyMatch) {
-          subDate = mdyMatch[3] + '-' + mdyMatch[1].padStart(2, '0') + '-' + mdyMatch[2].padStart(2, '0');
+      let subTime = '';
+
+      // 1. Primary: Evaluate true Unix epoch from SUB ID formatted in America/New_York (EST/EDT)
+      const idMatch = String(sub.Submission_ID || '').match(/SUB-(\d{10,13})/i);
+      if (idMatch) {
+        const ep = Number(idMatch[1]);
+        if (ep > 1600000000000 && ep < 2500000000000) {
+          const d = new Date(ep);
+          subDate = Utilities.formatDate(d, TIMEZONE_EST, 'yyyy-MM-dd');
+          subTime = Utilities.formatDate(d, TIMEZONE_EST, 'HH:mm:ss');
         }
       }
+
+      // 2. Secondary: Fallback to sub.Timestamp string if SUB epoch was absent
       if (!subDate) {
-        const idMatch = String(sub.Submission_ID || '').match(/SUB-(\d{10,13})/i);
-        if (idMatch) {
-          const ep = Number(idMatch[1]);
-          if (ep > 1600000000000 && ep < 2500000000000) {
-            subDate = Utilities.formatDate(new Date(ep), TIMEZONE_EST, 'yyyy-MM-dd');
+        const ts = String(sub.Timestamp || '');
+        const match = ts.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T\s](\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+        if (match) {
+          subDate = match[1];
+          const hh = match[2] ? match[2].padStart(2, '0') : '00';
+          const mm = match[3] ? match[3].padStart(2, '0') : '00';
+          const ss = match[4] ? match[4].padStart(2, '0') : '00';
+          subTime = hh + ':' + mm + ':' + ss;
+        } else {
+          const mdyMatch = ts.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[T\s](\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+          if (mdyMatch) {
+            subDate = mdyMatch[3] + '-' + mdyMatch[1].padStart(2, '0') + '-' + mdyMatch[2].padStart(2, '0');
+            const hh = mdyMatch[4] ? mdyMatch[4].padStart(2, '0') : '00';
+            const mm = mdyMatch[5] ? mdyMatch[5].padStart(2, '0') : '00';
+            const ss = mdyMatch[6] ? mdyMatch[6].padStart(2, '0') : '00';
+            subTime = hh + ':' + mm + ':' + ss;
           }
         }
       }
+
       if (!subDate) return false;
       const allowed = targetDate.split(',').map(function(s) { return s.trim(); }).filter(Boolean);
-      return allowed.indexOf(subDate) === -1;
+      if (allowed.indexOf(subDate) === -1) {
+        return true;
+      }
+      if (targetTime) {
+        const cutoffNorm = targetTime.length === 5 ? (targetTime + ':00') : targetTime;
+        const subNorm = subTime ? (subTime.length === 5 ? (subTime + ':00') : subTime) : '00:00:00';
+        if (subNorm > cutoffNorm) {
+          return true;
+        }
+      }
+      return false;
     }
 
     allScores.forEach(function(s) {
-      s.isOutOfDate = isScoreOutOfDate(s, appConfig.eventDate);
+      s.isOutOfDate = isScoreOutOfDate(s, appConfig.eventDate, appConfig.eventTime);
     });
 
     let bonusQuestions = [];

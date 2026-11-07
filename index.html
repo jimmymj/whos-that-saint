@@ -895,17 +895,51 @@
               </button>
             </div>
 
-            <!-- Official Event Window Date Picker (EST) -->
-            <div class="flex items-center justify-between gap-2 pt-2 border-t border-amber-400/30">
-              <div class="leading-tight">
-                <label for="inputAdminEventDate" class="text-xs font-black text-amber-200 uppercase tracking-wide">
-                  📅 Official Event Window Date (EST):
-                </label>
-                <p class="text-[10px] text-amber-100/70 font-semibold">Submissions outside this event window are unranked exhibitions on the scoreboard.</p>
+            <!-- Official Event End (Date & Time EST) -->
+            <div class="pt-2.5 border-t border-amber-400/30 space-y-2">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                <div>
+                  <label class="text-xs font-black text-amber-200 uppercase tracking-wide flex items-center gap-1.5">
+                    <span>📅</span> <span>Official Event End (EST):</span>
+                  </label>
+                  <p class="text-[10px] text-amber-100/70 font-semibold">Submissions after this Date &amp; Time are unranked exhibitions on the scoreboard.</p>
+                </div>
+                <span id="adminEventEndBadge" class="self-start sm:self-auto px-2 py-0.5 rounded text-[10px] font-black bg-amber-400 text-royal-950 shrink-0 shadow-xs">
+                  Nov 1, 2026 at 9:00 PM EST
+                </span>
               </div>
-              <input id="inputAdminEventDate" type="date" value="2026-11-01"
-                onchange="adminUpdateEventDate(this.value)"
-                class="min-h-[36px] px-2.5 rounded-lg bg-white text-royal-950 font-bold text-xs border border-amber-300 shadow-inner" />
+
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <!-- Date Picker Card -->
+                <div class="rounded-xl p-2 bg-royal-900/90 border border-amber-400/40 space-y-1">
+                  <label for="inputAdminEventDate" class="text-[10px] font-black text-amber-200 uppercase tracking-wider block">
+                    End Date:
+                  </label>
+                  <input id="inputAdminEventDate" type="date" value="2026-11-01"
+                    onchange="adminUpdateEventDateTime()"
+                    class="w-full min-h-[38px] px-2.5 rounded-lg bg-white text-royal-950 font-bold text-xs border border-amber-300 shadow-inner focus:outline-none focus:ring-2 focus:ring-amber-400" />
+                </div>
+
+                <!-- Time Picker Card -->
+                <div class="rounded-xl p-2 bg-royal-900/90 border border-amber-400/40 space-y-1">
+                  <label for="inputAdminEventTime" class="text-[10px] font-black text-amber-200 uppercase tracking-wider block">
+                    End Time (EST):
+                  </label>
+                  <input id="inputAdminEventTime" type="time" value="21:00"
+                    onchange="adminUpdateEventDateTime()"
+                    class="w-full min-h-[38px] px-2.5 rounded-lg bg-white text-royal-950 font-mono font-bold text-xs border border-amber-300 shadow-inner focus:outline-none focus:ring-2 focus:ring-amber-400" />
+                </div>
+
+                <!-- Clear Time Button Card -->
+                <div class="rounded-xl p-2 bg-royal-900/90 border border-amber-400/40 flex flex-col justify-between">
+                  <span class="text-[10px] font-bold text-amber-100/70 block">Time Cutoff:</span>
+                  <button type="button" onclick="adminClearEventTime()"
+                    title="Clear cutoff time (allows full day until 11:59 PM)"
+                    class="w-full min-h-[38px] px-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 font-black text-xs shadow active:scale-[0.98] flex items-center justify-center gap-1.5">
+                    <span>✕</span> <span>Clear Time (Full Day)</span>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
           <p id="adminEventSyncStatusText" class="text-[11px] font-bold text-amber-300/80"></p>
@@ -2535,7 +2569,8 @@
         bonusPointsPerQuestion: 5,
         themeStartupMode: 'dynamic_month',
         themeManualMonth: 10,
-        eventDate: '2026-11-01'
+        eventDate: '2026-11-01',
+        eventTime: '21:00'
       },
       session: {
         active: false,
@@ -2758,7 +2793,8 @@
             bonusPointsPerQuestion: Number(parsed.bonusPointsPerQuestion) || 5,
             themeStartupMode: parsed.themeStartupMode || 'dynamic_month',
             themeManualMonth: parsed.themeManualMonth !== undefined ? Number(parsed.themeManualMonth) : 10,
-            eventDate: parsed.eventDate || '2026-11-01'
+            eventDate: parsed.eventDate || '2026-11-01',
+            eventTime: parsed.eventTime !== undefined ? String(parsed.eventTime) : '21:00'
           };
         }
 
@@ -3053,12 +3089,116 @@
       renderActivityOptionsUI();
     }
 
+    const MONTH_MAP = {
+      jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06',
+      jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12',
+      january: '01', february: '02', march: '03', april: '04', may: '05', june: '06',
+      july: '07', august: '08', september: '09', october: '10', november: '11', december: '12'
+    };
+
+    function sanitizeDateStr(val) {
+      if (!val) return '2026-11-01';
+      if (val instanceof Date) {
+        try {
+          const parts = new Intl.DateTimeFormat('en-US', {
+            timeZone: TIMEZONE_EST,
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+          }).formatToParts(val);
+          const p = {};
+          parts.forEach(x => p[x.type] = x.value);
+          return p.year + '-' + p.month + '-' + p.day;
+        } catch (e) {}
+      }
+      const s = String(val).trim();
+      const ymd = s.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+      if (ymd) return ymd[1] + '-' + ymd[2].padStart(2, '0') + '-' + ymd[3].padStart(2, '0');
+      const mdy = s.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+      if (mdy) return mdy[3] + '-' + mdy[1].padStart(2, '0') + '-' + mdy[2].padStart(2, '0');
+      const textMatch = s.match(/(?:[A-Za-z]{3,9},?\s+)?([A-Za-z]{3,9})\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+(\d{4})/i);
+      if (textMatch) {
+        const mStr = textMatch[1].toLowerCase();
+        const mo = MONTH_MAP[mStr];
+        if (mo) {
+          const day = textMatch[2].padStart(2, '0');
+          const year = textMatch[3];
+          return year + '-' + mo + '-' + day;
+        }
+      }
+      return '2026-11-01';
+    }
+
+    function sanitizeTimeStr(val) {
+      if (val === undefined || val === null) return '';
+      if (val instanceof Date) {
+        try {
+          const parts = new Intl.DateTimeFormat('en-US', {
+            timeZone: TIMEZONE_EST,
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+          }).formatToParts(val);
+          const p = {};
+          parts.forEach(x => p[x.type] = x.value);
+          const hh = p.hour === '24' ? '00' : p.hour;
+          return hh + ':' + p.minute;
+        } catch (e) {}
+      }
+      const s = String(val).trim();
+      if (!s) return '';
+
+      const ampmMatch = s.match(/(\d{1,2}):(\d{2})(?::\d{2})?\s*([ap]m)/i);
+      if (ampmMatch) {
+        let h = parseInt(ampmMatch[1], 10);
+        const m = ampmMatch[2];
+        const ampm = ampmMatch[3].toUpperCase();
+        if (ampm === 'PM' && h < 12) h += 12;
+        if (ampm === 'AM' && h === 12) h = 0;
+        return (h < 10 ? '0' + h : String(h)) + ':' + m;
+      }
+
+      const tMatch = s.match(/(?:^|\b|\s)(\d{1,2}):(\d{2})(?::\d{2})?(?:$|\b|\s)/);
+      if (tMatch) {
+        const h = parseInt(tMatch[1], 10);
+        const m = tMatch[2];
+        if (h >= 0 && h <= 23 && parseInt(m, 10) >= 0 && parseInt(m, 10) <= 59) {
+          return (h < 10 ? '0' + h : String(h)) + ':' + m;
+        }
+      }
+      return '';
+    }
+
+    function updateEventEndBadge() {
+      const badge = document.getElementById('adminEventEndBadge');
+      if (!badge) return;
+      const d = sanitizeDateStr(appState.settings.eventDate) || '2026-11-01';
+      const t = sanitizeTimeStr(appState.settings.eventTime);
+      let timeStr = 'Full Day (Until 11:59 PM)';
+      if (t) {
+        const parts = t.split(':');
+        let h = Number(parts[0]);
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        h = h % 12 || 12;
+        timeStr = h + ':' + parts[1] + ' ' + ampm + ' EST';
+      }
+      const dateFormatted = formatSubDateDisplay({ Timestamp: d });
+      badge.textContent = dateFormatted + (t ? (' at ' + timeStr) : ' • Full Day');
+    }
+
     function updateSettingsUI() {
       const activeUrl = getActiveCloudUrl();
       const urlInput = document.getElementById('inputWebhookUrl');
       if (urlInput) urlInput.value = activeUrl;
       const eventDateInput = document.getElementById('inputAdminEventDate');
-      if (eventDateInput) eventDateInput.value = appState.settings.eventDate || '2026-11-01';
+      if (eventDateInput) {
+        eventDateInput.value = sanitizeDateStr(appState.settings.eventDate) || '2026-11-01';
+      }
+      const eventTimeInput = document.getElementById('inputAdminEventTime');
+      if (eventTimeInput) {
+        eventTimeInput.value = sanitizeTimeStr(appState.settings.eventTime);
+      }
+      updateEventEndBadge();
       updateAdminThemeUI();
 
       const hashBadge = document.getElementById('cloudUrlHashBadge');
@@ -4558,21 +4698,12 @@
     /**************************************************************
      * EVENT DATE & OUT-OF-DATE SUBMISSION DETECTION
      **************************************************************/
-    function getSubmissionDateEst(sub) {
-      if (!sub) return "";
+    function parseSubmissionDateTimeEst(sub) {
+      if (!sub) return { date: "", time: "" };
       const ts = sub.Timestamp;
-      if (typeof ts === "string") {
-        const match = ts.match(/^(\d{4}-\d{2}-\d{2})/);
-        if (match) return match[1];
-        const mdyMatch = ts.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-        if (mdyMatch) {
-          const y = mdyMatch[3];
-          const m = mdyMatch[1].padStart(2, "0");
-          const d = mdyMatch[2].padStart(2, "0");
-          return y + "-" + m + "-" + d;
-        }
-      }
       const id = sub.Submission_ID || "";
+
+      // 1. Try SUB-<epoch> ID
       const m = String(id).match(/SUB-(\d{10,13})/i);
       if (m) {
         const epoch = Number(m[1]);
@@ -4582,14 +4713,53 @@
               timeZone: TIMEZONE_EST,
               year: "numeric",
               month: "2-digit",
-              day: "2-digit"
+              day: "2-digit",
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+              hour12: false
             }).formatToParts(new Date(epoch));
             const p = {};
             parts.forEach(x => p[x.type] = x.value);
-            return p.year + "-" + p.month + "-" + p.day;
+            const hh = p.hour === "24" ? "00" : p.hour;
+            return {
+              date: p.year + "-" + p.month + "-" + p.day,
+              time: hh + ":" + p.minute + ":" + p.second
+            };
           } catch (e) {}
         }
       }
+
+      // 2. Parse string timestamp: e.g. "2026-11-01 21:21:15 EST"
+      if (typeof ts === "string") {
+        const ymdMatch = ts.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T\s](\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+        if (ymdMatch) {
+          const y = ymdMatch[1];
+          const mo = ymdMatch[2];
+          const d = ymdMatch[3];
+          const hh = ymdMatch[4] ? ymdMatch[4].padStart(2, "0") : "00";
+          const mm = ymdMatch[5] ? ymdMatch[5].padStart(2, "0") : "00";
+          const ss = ymdMatch[6] ? ymdMatch[6].padStart(2, "0") : "00";
+          return {
+            date: y + "-" + mo + "-" + d,
+            time: hh + ":" + mm + ":" + ss
+          };
+        }
+        const mdyMatch = ts.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[T\s](\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+        if (mdyMatch) {
+          const y = mdyMatch[3];
+          const mo = mdyMatch[1].padStart(2, "0");
+          const d = mdyMatch[2].padStart(2, "0");
+          const hh = mdyMatch[4] ? mdyMatch[4].padStart(2, "0") : "00";
+          const mm = mdyMatch[5] ? mdyMatch[5].padStart(2, "0") : "00";
+          const ss = mdyMatch[6] ? mdyMatch[6].padStart(2, "0") : "00";
+          return {
+            date: y + "-" + mo + "-" + d,
+            time: hh + ":" + mm + ":" + ss
+          };
+        }
+      }
+
       if (ts) {
         try {
           const d = new Date(ts);
@@ -4598,28 +4768,64 @@
               timeZone: TIMEZONE_EST,
               year: "numeric",
               month: "2-digit",
-              day: "2-digit"
+              day: "2-digit",
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+              hour12: false
             }).formatToParts(d);
             const p = {};
             parts.forEach(x => p[x.type] = x.value);
-            return p.year + "-" + p.month + "-" + p.day;
+            const hh = p.hour === "24" ? "00" : p.hour;
+            return {
+              date: p.year + "-" + p.month + "-" + p.day,
+              time: hh + ":" + p.minute + ":" + p.second
+            };
           }
         } catch (e) {}
       }
-      return "";
+      return { date: "", time: "" };
+    }
+
+    function getSubmissionDateEst(sub) {
+      return parseSubmissionDateTimeEst(sub).date;
     }
 
     function isSubmissionOutOfEventDate(sub) {
       if (!sub) return false;
+
+      const officialDate = sanitizeDateStr(appState.settings && appState.settings.eventDate) || "2026-11-01";
+      const officialTime = sanitizeTimeStr(appState.settings && appState.settings.eventTime);
+
+      const { date: subDate, time: subTime } = parseSubmissionDateTimeEst(sub);
+
+      // Primary check: evaluate true submission timestamp against official cutoff
+      if (subDate) {
+        const target = String(officialDate).trim();
+        const allowed = target.split(",").map(s => s.trim()).filter(Boolean);
+        if (!allowed.includes(subDate)) {
+          return true; // Not on the official date
+        }
+
+        // If submitted on the official date, check time cutoff if specified
+        if (officialTime) {
+          const cutoffNorm = officialTime.length === 5 ? (officialTime + ":00") : officialTime;
+          const subNorm = subTime ? (subTime.length === 5 ? (subTime + ":00") : subTime) : "00:00:00";
+          if (subNorm > cutoffNorm) {
+            return true; // Submitted after official cutoff time
+          }
+        }
+
+        // Submitted on event date and within cutoff time: Official Entry!
+        return false;
+      }
+
+      // Fallback only if submission date cannot be determined from record
       if (sub.isOutOfDate === true || sub.Is_Out_Of_Date === true || sub.Out_Of_Date === true) {
         return true;
       }
-      const officialDate = (appState.settings && appState.settings.eventDate) ? appState.settings.eventDate : "2026-11-01";
-      const subDate = getSubmissionDateEst(sub);
-      if (!subDate) return false;
-      const target = String(officialDate || "2026-11-01").trim();
-      const allowed = target.split(",").map(s => s.trim()).filter(Boolean);
-      return !allowed.includes(subDate);
+
+      return false;
     }
 
     function formatSubTimeDisplay(sub) {
@@ -4714,16 +4920,39 @@
       return dateStr;
     }
 
-    function adminUpdateEventDate(val) {
-      const cleanVal = String(val || "").trim();
-      if (!cleanVal) return;
-      appState.settings.eventDate = cleanVal;
+    function adminUpdateEventDateTime() {
+      const dateInput = document.getElementById('inputAdminEventDate');
+      const timeInput = document.getElementById('inputAdminEventTime');
+      const dateVal = dateInput ? String(dateInput.value || '').trim() : '';
+      const timeVal = timeInput ? String(timeInput.value || '').trim() : '';
+
+      if (dateVal) appState.settings.eventDate = dateVal;
+      appState.settings.eventTime = timeVal;
+
       saveAdminSettings();
       renderLeaderboardAndAppreciation();
       renderAdminScoresTable();
       renderAdminPodiumAndTicker();
-      showToast("Official Event Window set to " + cleanVal + "!", "info");
+
+      updateEventEndBadge();
+      let timeFormatted = '';
+      if (timeVal) {
+        const parts = timeVal.split(':');
+        let h = Number(parts[0]);
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        h = h % 12 || 12;
+        timeFormatted = ' at ' + h + ':' + (parts[1] || '00') + ' ' + ampm;
+      } else {
+        timeFormatted = ' (End of Day)';
+      }
+      showToast('Official Event End set to ' + (appState.settings.eventDate || '2026-11-01') + timeFormatted + ' EST!', 'info');
       saveAdminAppConfigToCloud();
+    }
+
+    function adminClearEventTime() {
+      const timeInput = document.getElementById('inputAdminEventTime');
+      if (timeInput) timeInput.value = '';
+      adminUpdateEventDateTime();
     }
 
     function getSortedSubmissions(submissionsArray) {
@@ -5144,7 +5373,8 @@
         bonusPointsPerQuestion: Number(appState.settings.bonusPointsPerQuestion) || 5,
         themeStartupMode: appState.settings.themeStartupMode || 'dynamic_month',
         themeManualMonth: appState.settings.themeManualMonth !== undefined ? Number(appState.settings.themeManualMonth) : 10,
-        eventDate: appState.settings.eventDate || '2026-11-01'
+        eventDate: appState.settings.eventDate || '2026-11-01',
+        eventTime: appState.settings.eventTime || ''
       });
 
       if (res.ok) {
@@ -5999,8 +6229,12 @@
             if (data.config.themeManualMonth !== undefined) {
               appState.settings.themeManualMonth = Number(data.config.themeManualMonth);
             }
-            if (data.config.eventDate !== undefined) {
-              appState.settings.eventDate = String(data.config.eventDate);
+            if (data.config.eventDate) {
+              const cleanD = sanitizeDateStr(data.config.eventDate);
+              if (cleanD) appState.settings.eventDate = cleanD;
+            }
+            if (data.config.eventTime !== undefined) {
+              appState.settings.eventTime = sanitizeTimeStr(data.config.eventTime);
             }
             localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(appState.settings));
             applyThemeOnCloudSync();
